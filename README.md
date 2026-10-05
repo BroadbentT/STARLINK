@@ -4,7 +4,7 @@
 
 ## STARLINK 2026 EDITION
 
-**UNDER CONSTRUCTION**
+**BETA RELEASE**
 
 <br>
 
@@ -23,14 +23,8 @@ A comprehensive, yet sleek and portable python script file that enables cyber se
 
 | LANGUAGE  | FILENAME                    | MD5 Hash                         | Description         | Version      |
 |------     |-------                      | -------                          | ----                |  ----        |
-| python3   | ccsds_spacecraft_console.py | hashvalues                       | Install Program     | BETA   |
+| python3   | ccsds_spacecraft_console.py | insert final hash value here     | Install Program     | BETA   |
 
-       
-## NEW BETA VERSION 2026 ##
-
-<p align="center">
-  <img src="">
-</p>
 
 ### COMPUTER MISUSE ACT 1990 - SECTION 3A
 This software program has been specifically written for the purpose of legitimate penetration testing and should not be used for any other unauthorised or nefarious reasons.
