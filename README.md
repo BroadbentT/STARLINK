@@ -30,7 +30,7 @@ A comprehensive, yet sleek and portable python script file that enables cyber se
 ## NEW WIDE-SCREEN LARX VERSION 2026 ##
 
 <p align="center">
-  <img src="https://github.com/BroadbentT/ROGUE-AGENT/blob/main/picture3.png">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink.png">
 </p>
 
 ### COMPUTER MISUSE ACT 1990 - SECTION 3A
