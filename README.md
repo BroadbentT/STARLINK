@@ -15,19 +15,18 @@
 ## COMMAND CENTRE FOR REMOTE COMPUTER NETWORK ANALYSIS
 
 <p align="justify">
-A comprehensive, yet sleek and portable python script file that enables cyber security professionals worldwide to remotely evaluate the threat posture of their companies forward-facing computer network. The latest release 'TREADSTONE' is not just capable of enumerating live ports and services, it can analyse smb and ldap active directory systems, start phishing campaigns, extrapolate hidden data such as subdomains, security identifers, usernames and encrypted passwords; utilise pass the hash techniques, crack and auto import ntds.dit files, create on-demand golden and silver Kerberos tickets and... well, so much more...
+A comprehensive, yet sleek and portable python script file that enables cyber security professionals worldwide to remotely evaluate the ccsds spacecraft.
 </p>
 
-**TESTED: Kali Linux 2019** <br>
-**USAGE : python3 RogueAgent.py** <br>
-**USAGE : python3 Dark-Operative.py** <br>
+**TESTED: Kali Linux 2026** <br>
+**USAGE : python3 ccsds_spacecraft_console** <br>
 
-| LANGUAGE  | FILENAME              | MD5 Hash                         | Description         | Version      |
-|------     |-------                | -------                          | ----                |  ----        |
-| python3   | install.py            | 1308801d23d07210c07b38af764db8a0 | Install Program     | TREADSTONE   |
+| LANGUAGE  | FILENAME                    | MD5 Hash                         | Description         | Version      |
+|------     |-------                      | -------                          | ----                |  ----        |
+| python3   | ccsds_spacecraft_console.py | hashvalues                       | Install Program     | BETA   |
 
        
-## NEW WIDE-SCREEN LARX VERSION 2026 ##
+## NEW BETA VERSION 2026 ##
 
 <p align="center">
   <img src="">
