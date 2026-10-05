@@ -9,7 +9,7 @@
 <br>
 
 <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink.png">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/STARLINK.png">
 </p>
 
 ## COMMAND CENTRE FOR REMOTE SATELLITE ANALYSIS
