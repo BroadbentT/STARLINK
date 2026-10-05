@@ -12,7 +12,7 @@
   <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink.png">
 </p>
 
-## COMMAND CENTRE FOR REMOTE COMPUTER NETWORK ANALYSIS
+## COMMAND CENTRE FOR REMOTE COMPUTER SATALITE ANALYSIS
 
 <p align="justify">
 A comprehensive, yet sleek and portable python script file that enables cyber security professionals worldwide to remotely evaluate the ccsds spacecraft.
