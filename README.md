@@ -12,10 +12,10 @@
   <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink.png">
 </p>
 
-## COMMAND CENTRE FOR REMOTE COMPUTER SATELLITE ANALYSIS
+## COMMAND CENTRE FOR REMOTE SATELLITE ANALYSIS
 
 <p align="justify">
-A comprehensive, yet sleek and portable python script file that enables cyber security professionals worldwide to remotely evaluate the ccsds spacecraft.
+A comprehensive, yet sleek and portable python script file that enables cyber security professionals to remotely evaluate the ccsds spacecraft.
 </p>
 
 **TESTED: Kali Linux 2026** <br>
