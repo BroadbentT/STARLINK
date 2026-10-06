@@ -221,4 +221,4 @@ Found this project useful, or would like to support further development?
 
 ☕ [Buy the developer a coffee / donate via PayPal](https://paypal.me/TerenceBroadbent)
 
-**STARLINK — Research. Validate. Secure the Space Segment.**
+**STARLINK — Research. Validate. Secure Space.**
