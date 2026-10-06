@@ -182,27 +182,19 @@ python3 ccsds_spacecraft_console.py
 | Component                    | Status                             |
 | ---------------------------- | ---------------------------------- |
 | Python CLI                   | Beta                               |
-| CCSDS packet inspection      | Planned / implementation-dependent |
-| Telecommand frame validation | Planned / implementation-dependent |
-| Orbital calculations         | Planned / implementation-dependent |
-| RF and SDR analysis          | Planned / implementation-dependent |
-| Ground-station assessment    | Planned / implementation-dependent |
-| Firmware analysis            | Planned / implementation-dependent |
-| Automated reporting          | Planned / implementation-dependent |
+| CCSDS packet inspection      | Beta  |
+| Telecommand frame validation | Beta  |
+| Orbital calculations         | Beta  |
+| RF and SDR analysis          | Beta  |
+| Ground-station assessment    | Beta |
+| Firmware analysis            | Beta |
+| Automated reporting          | Beta  |
 
 ## PROJECT METADATA
 
 | Language | Filename                      | MD5 Hash               | Version |
 | -------- | ----------------------------- | ---------------------- | ------- |
 | Python 3 | `ccsds_spacecraft_console.py` | `PENDING_RELEASE_HASH` | Beta    |
-
-Calculate the MD5 hash of the final released file on Kali Linux:
-
-```bash
-md5sum ccsds_spacecraft_console.py
-```
-
-For release verification, consider publishing a SHA-256 checksum alongside the MD5 value.
 
 ## LEGAL & ETHICAL USE
 
