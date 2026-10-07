@@ -117,6 +117,24 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
 * Severity, impact and remediation documentation.
 * Exportable assessment results for technical reporting.
 
+## STARLINK — HTB Satellite Exploitation Track Cross-Reference
+
+| STARLINK Core Capability                    | Related HTB Challenge(s)                                    | Relationship               |
+| ------------------------------------------- | ----------------------------------------------------------- | -------------------------- |
+| Satellite Reconnaissance & Orbital Analysis | First Contact; Antenna Pointing                             | Direct                     |
+| CCSDS Protocol Analysis                     | Baby Frame; No Errors; Space Ops                            | Multiple challenges        |
+| Telecommand Frame Construction & Validation | Baby Frame; No Errors; Space Ops                            | Cross-cutting              |
+| Stateful Protocol & Sequence Analysis       | Echoes in Orbit; Space Ops                                  | Cross-cutting              |
+| RF Communications & Signal Analysis         | Signal from Space; Space Ops                                | Direct and cross-cutting   |
+| Satellite Ground-Station Security           | Groundstation Breach                                        | Direct                     |
+| Embedded Systems & Firmware Analysis        | Scalped Platform                                            | Direct                     |
+| Satellite Communications Security           | Groundstation Breach; Echoes in Orbit; No Errors; Space Ops | Broader security objective |
+| Automated Validation & Reporting            | All nine challenges                                         | Supporting capability      |
+
+**Reference:** [Hack The Box — Satellite Exploitation Track](https://app.hackthebox.com/tracks/99)
+
+**Note:** These mappings represent proposed technical relationships between STARLINK's development roadmap and HTB's training challenges. They do not imply that every capability is explicitly covered by a specific challenge or implemented in the current STARLINK release.
+
 ---
 
 ## PROJECT OBJECTIVES
