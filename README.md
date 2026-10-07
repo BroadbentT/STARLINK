@@ -195,19 +195,6 @@ python3 ccsds_spacecraft_console.py
 
 *The command-line options and supported modules depend on the current implementation.*
 
-## DEVELOPMENT STATUS
-
-| Component                    | Status                             |
-| ---------------------------- | ---------------------------------- |
-| Python CLI                   | Beta                               |
-| CCSDS packet inspection      | Beta  |
-| Telecommand frame validation | Beta  |
-| Orbital calculations         | Beta  |
-| RF and SDR analysis          | Beta  |
-| Ground-station assessment    | Beta |
-| Firmware analysis            | Beta |
-| Automated reporting          | Beta  |
-
 ## PROJECT METADATA
 
 | Language | Filename                      | MD5 Hash               | Version |
