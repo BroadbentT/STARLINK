@@ -229,7 +229,7 @@ The developer does not endorse unauthorised access, disruption, interference or 
 ## REFERENCES & FURTHER LEARNING
 
 * [Hack The Box — Satellite Exploitation Track](https://app.hackthebox.com/tracks/99)
-* [Hack The Box — Satellite Exploitation Track Overview](https://www.hackthebox.com/blog/hack-the-orbit-satellite-exploitation-track-is-live)
+* [Hack The Box — Satellite Exploitation Track Overview](https://www.hackthebox.com/blog/hack-the-orbit-satellite-exploitation-track)
 * [CCSDS — Consultative Committee for Space Data Systems](https://ccsds.org/)
 * [NASA — Space Communications and Navigation](https://www.nasa.gov/communicating-with-missions/)
 
