@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink2026.png" width="80%">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/LOGO.png" width="80%"> 
 </p>
 
 # 🛰️ STARLINK 2026 EDITION
@@ -7,7 +7,7 @@
 **BETA RELEASE | Satellite Cybersecurity Research Toolkit**
 
  <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/STARLINK.png" alt="STARLINK Command Centre" width="80%">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink2026.png" alt="STARLINK Command Centre" width="80%">
 </p>
 
 ## COMMAND CENTRE FOR REMOTE SATELLITE ANALYSIS
