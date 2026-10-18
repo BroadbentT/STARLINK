@@ -114,7 +114,7 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
 * Exportable assessment results for technical reporting.
 
 <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/NewConsole.png" alt="STARLINK Command Centre" width="65%">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/NewConsole.png" alt="STARLINK Command Centre" width="50%">
 </p>
 
 ## STARLINK — HTB Satellite Exploitation Track Cross-Reference
@@ -167,6 +167,10 @@ STARLINK aims to provide a practical foundation for satellite cybersecurity rese
 * A simulated spacecraft, protocol test harness or explicitly authorised test environment.
 
 ## INSTALLATION & USAGE
+
+ <p align="center">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/STARLINK.png" alt="STARLINK Command Centre"  width="50%>
+</p>
 
 Clone the repository:
 
