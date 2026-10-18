@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/LOGO.png" alt="STARLINK Logo" width="80%">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/StarLink2026.png" width="80%">
 </p>
 
 # 🛰️ STARLINK 2026 EDITION
