@@ -226,4 +226,4 @@ Found this project useful, or would like to support further development?
 
 ☕ [Buy the developer a coffee / donate via PayPal](https://paypal.me/TerenceBroadbent)
 
-**STARLINK — Research. Validate. Secure Space.**
+**STARLINK 2026 — Capture. Craft. Decode. Reach Further.**
