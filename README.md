@@ -170,7 +170,7 @@ STARLINK aims to provide a practical foundation for satellite cybersecurity rese
 
 ## INSTALLATION & USAGE
 
- <p align="center">
+<p align="center">
   <img src="https://github.com/BroadbentT/STARLINK/blob/main/STARLINK.png" alt="STARLINK Command Centre"  width="50%>
 </p>
 
