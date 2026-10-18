@@ -112,8 +112,12 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
 * Evidence capture for security findings.
 * Severity, impact and remediation documentation.
 * Exportable assessment results for technical reporting.
+  
+---
 
 ## STARLINK — HTB Satellite Exploitation Track Cross-Reference
+
+---
 
 | STARLINK Core Capability                    | Related HTB Challenge(s)                                    | Relationship               |
 | ------------------------------------------- | ----------------------------------------------------------- | -------------------------- |
