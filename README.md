@@ -8,7 +8,7 @@
 
 ## COMMAND CENTRE FOR REMOTE SATELLITE ANALYSIS
 
-STARLINK is a lightweight, portable Python-based satellite cybersecurity research project designed to support the analysis, validation and security assessment of spacecraft communication protocols, satellite ground infrastructure and simulated space systems.
+STARLINK 2026 is a lightweight, portable Python-based satellite cybersecurity research project designed to support the analysis, validation and security assessment of spacecraft communication protocols, satellite ground infrastructure and simulated space systems.
 
 Inspired by modern satellite exploitation training and the security challenges surrounding Telemetry, Tracking and Command (TT&C) systems, STARLINK aims to bring essential satellite-security research capabilities into a unified command-line environment.
 
