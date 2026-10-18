@@ -132,8 +132,9 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
 **Note:** These mappings represent proposed technical relationships between STARLINK's development roadmap and HTB's training challenges. They do not imply that every capability is explicitly covered by a specific challenge or implemented in the current STARLINK release.
 
 <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/NewConsole.png" alt="STARLINK Command Centre" width="40%">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/NewConsole.png" alt="STARLINK Command Centre" width="50%">
 </p>
+
 ---
 
 ## PROJECT OBJECTIVES
