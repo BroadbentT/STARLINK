@@ -117,8 +117,6 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
 
 ## STARLINK — HTB Satellite Exploitation Track Cross-Reference
 
----
-
 | STARLINK Core Capability                    | Related HTB Challenge(s)                                    | Relationship               |
 | ------------------------------------------- | ----------------------------------------------------------- | -------------------------- |
 | Satellite Reconnaissance & Orbital Analysis | First Contact; Antenna Pointing                             | Direct                     |
