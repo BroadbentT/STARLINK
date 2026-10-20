@@ -115,6 +115,10 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
   
 ---
 
+<p align="center">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/NewConsole.png" alt="STARLINK Command Centre" width="80%">
+</p>
+
 ## STARLINK — HTB Satellite Exploitation Track Cross-Reference
 
 | STARLINK Core Capability                    | Related HTB Challenge(s)                                    | Relationship               |
@@ -132,10 +136,6 @@ The project roadmap covers CCSDS protocol analysis, telemetry inspection, teleco
 **Reference:** [Hack The Box — Satellite Exploitation Track](https://app.hackthebox.com/tracks/99)
 
 **Note:** These mappings represent proposed technical relationships between STARLINK's development roadmap and HTB's training challenges. They do not imply that every capability is explicitly covered by a specific challenge or implemented in the current STARLINK release.
-
-<p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/NewConsole.png" alt="STARLINK Command Centre" width="50%">
-</p>
 
 ---
 
