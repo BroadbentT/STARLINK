@@ -39,25 +39,37 @@ from pwn import hexdump, log, remote
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
-def demodulate():
-    wav_files = [f for f in os.listdir(".") if f.lower().endswith(".wav") and os.path.isfile(f) ]
-    if wav_files:
-        print("WAV files in the current directory:")
-        for f in wav_files:
-            print(f" - {f}")
-    else:
-        print("No WAV files found in the current directory.")
-        pause()
-        return
-    while True:
-        path = input("\nEnter the WAV filename: ").strip()
+def demodulate(input_path=None):
+    """Demodulate a WAV file. An explicit path enables non-interactive GUI use."""
+    if input_path:
+        path = os.path.abspath(os.path.expanduser(input_path))
         if not path.lower().endswith(".wav"):
-            print("Please enter a filename ending in .wav.")
-        elif os.path.isfile(path):
-            print(f"File found: {path}")
-            break
+            print(f"ERROR: Input file must have a .wav extension: {path}")
+            return
+        if not os.path.isfile(path):
+            print(f"ERROR: WAV file not found: {path}")
+            return
+        print(f"Using WAV file supplied by caller: {path}")
+    else:
+        wav_files = [f for f in os.listdir(".")
+                     if f.lower().endswith(".wav") and os.path.isfile(f)]
+        if wav_files:
+            print("WAV files in the current directory:")
+            for f in wav_files:
+                print(f" - {f}")
         else:
-            print("File not found. Please try again.")
+            print("No WAV files found in the current directory.")
+            return
+        while True:
+            path = input("\nEnter the WAV filename: ").strip()
+            if not path.lower().endswith(".wav"):
+                print("Please enter a filename ending in .wav.")
+            elif os.path.isfile(path):
+                print(f"File found: {path}")
+                path = os.path.abspath(path)
+                break
+            else:
+                print("File not found. Please try again.")
 
 
     # STAGE 1: LOAD WAV FILE
@@ -75,7 +87,6 @@ def demodulate():
             raw = wf.readframes(nframes)
     except (wave.Error, OSError) as exc:
         print(f"ERROR: Unable to read WAV file: {exc}")
-        pause()
         return
 
     print(f"    Filename           : {path}")
@@ -88,22 +99,18 @@ def demodulate():
 
     if sample_width != 2:
         print("\nWARNING: This decoder currently expects 16-bit PCM audio.")
-        pause()
         return
 
     if sr < 1200:
         print("\nERROR: Sample rate is too low for 1200 baud.")
-        pause()
         return
 
     if nframes == 0:
         print("\nERROR: The WAV file contains no audio frames.")
-        pause()
         return
 
     if nch not in (1, 2):
         print(f"\nERROR: Unsupported channel count: {nch}")
-        pause()
         return
 
     # STAGE 2: PREPARE AUDIO SAMPLES
@@ -136,7 +143,6 @@ def demodulate():
     print(f"    Frequency samples  : {len(inst_freq)}")
     if len(inst_freq) == 0:
         print("ERROR: No frequency samples available.")
-        pause()
         return
     print(f"    Minimum frequency : {np.min(inst_freq):.2f} Hz")
     print(f"    Maximum frequency : {np.max(inst_freq):.2f} Hz")
@@ -150,12 +156,10 @@ def demodulate():
     bps = sr // 1200
     if bps < 1:
         print("ERROR: Invalid samples-per-bit value.")
-        pause()
         return
     nb = len(inst_freq) // bps
     if nb == 0:
         print("ERROR: Audio is too short to decode.")
-        pause()
         return
     print(f"    Target baud rate   : 1200")
     print(f"    Samples per bit    : {bps}")
@@ -241,4 +245,6 @@ def demodulate():
 # ============================================================
 
 if __name__ == "__main__":
-    demodulate()
+    # GUI launches this script with the selected file path as argv[1].
+    # Running it manually without arguments retains the interactive workflow.
+    demodulate(sys.argv[1] if len(sys.argv) > 1 else None)

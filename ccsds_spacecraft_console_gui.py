@@ -187,11 +187,14 @@ class SpacecraftGUI(tk.Tk):
             )
         params.columnconfigure(1, weight=1)
 
-        # Equal-height, user-resizable Payload and Terminal panels.
+        # Payload and File Management are side-by-side; the terminal remains below.
         left_detail_panes = ttk.Panedwindow(left, orient="vertical")
         left_detail_panes.pack(fill="both", expand=True, pady=(10, 0))
-        payload_frame = ttk.LabelFrame(left_detail_panes, text="Payload", padding=10)
-        left_detail_panes.add(payload_frame, weight=1)
+        content_panes = ttk.Panedwindow(left_detail_panes, orient="horizontal")
+        left_detail_panes.add(content_panes, weight=3)
+
+        payload_frame = ttk.LabelFrame(content_panes, text="Payload", padding=10)
+        content_panes.add(payload_frame, weight=1)
         self.payload_mode = tk.StringVar(value="text")
         mode_row = ttk.Frame(payload_frame)
         mode_row.pack(fill="x", pady=(0, 6))
@@ -200,10 +203,31 @@ class SpacecraftGUI(tk.Tk):
         ttk.Radiobutton(mode_row, text="Hex bytes", variable=self.payload_mode,
                         value="hex").pack(side="left", padx=(12, 0))
         self.payload_text = ScrolledText(payload_frame, height=5, wrap="word")
-        # Let the payload editor use the full pane, matching the terminal pane below.
         self.payload_text.pack(fill="both", expand=True)
         ttk.Label(payload_frame, text="Hex mode accepts spaces, colons, or hyphens.",
                   foreground="gray").pack(anchor="w", pady=(5, 0))
+
+        file_frame = ttk.LabelFrame(content_panes, text="File Management", padding=10)
+        content_panes.add(file_frame, weight=1)
+        self.selected_audio_path = tk.StringVar(value="")
+        self.file_directory = tk.StringVar(value=str(Path(__file__).resolve().parent))
+        ttk.Label(file_frame, text="Directory").pack(anchor="w")
+        dir_row = ttk.Frame(file_frame)
+        dir_row.pack(fill="x", pady=(2, 6))
+        ttk.Entry(dir_row, textvariable=self.file_directory).pack(side="left", fill="x", expand=True)
+        ttk.Button(dir_row, text="Browse…", command=self.browse_file_directory).pack(side="left", padx=(5, 0))
+        ttk.Label(file_frame, text="Files in directory (.wav first)").pack(anchor="w")
+        self.file_list = tk.Listbox(file_frame, height=6, exportselection=False)
+        self.file_list.pack(fill="both", expand=True, pady=(2, 6))
+        self.file_list.bind("<<ListboxSelect>>", self.select_listed_file)
+        file_buttons = ttk.Frame(file_frame)
+        file_buttons.pack(fill="x")
+        ttk.Button(file_buttons, text="Refresh", command=self.refresh_file_list).pack(side="left")
+        ttk.Button(file_buttons, text="Select WAV…", command=self.browse_audio_file).pack(side="left", padx=(5, 0))
+        ttk.Button(file_buttons, text="Clear", command=self.clear_selected_file).pack(side="left", padx=(5, 0))
+        ttk.Label(file_frame, text="Assigned variable: selected_audio_path").pack(anchor="w", pady=(7, 0))
+        ttk.Entry(file_frame, textvariable=self.selected_audio_path, state="readonly").pack(fill="x", pady=(2, 0))
+        self.refresh_file_list()
 
 
         # The original console's complete 12-operation menu is represented here.
@@ -255,6 +279,65 @@ class SpacecraftGUI(tk.Tk):
         self.status = tk.StringVar(value="Starting…")
         ttk.Label(self, textvariable=self.status, relief="sunken",
                   anchor="w", padding=(6, 4)).pack(fill="x", pady=(10, 0))
+
+    def browse_file_directory(self):
+        directory = filedialog.askdirectory(
+            title="Choose file-management directory",
+            initialdir=self.file_directory.get() or str(Path(__file__).resolve().parent),
+            parent=self,
+        )
+        if directory:
+            self.file_directory.set(directory)
+            self.refresh_file_list()
+
+    def refresh_file_list(self):
+        directory = Path(self.file_directory.get()).expanduser()
+        self.file_list.delete(0, "end")
+        self._listed_files = []
+        if not directory.is_dir():
+            self.log("WARNING", f"File-management directory does not exist: {directory}")
+            return
+        try:
+            files = sorted((item for item in directory.iterdir() if item.is_file()),
+                           key=lambda item: (item.suffix.lower() != ".wav", item.name.lower()))
+        except OSError as exc:
+            messagebox.showerror("File management", f"Cannot list directory:\n{exc}", parent=self)
+            return
+        self._listed_files = files
+        for item in files:
+            suffix = "  [WAV]" if item.suffix.lower() == ".wav" else ""
+            self.file_list.insert("end", item.name + suffix)
+        self.log("INFO", f"File list refreshed: {directory} ({len(files)} files)")
+
+    def select_listed_file(self, _event=None):
+        selection = self.file_list.curselection()
+        if not selection:
+            return
+        path = self._listed_files[selection[0]].resolve()
+        self.selected_audio_path.set(str(path))
+        self.log("INFO", f"Assigned selected_audio_path = {path}")
+        self.status.set(f"File assigned: {path.name}")
+
+    def browse_audio_file(self):
+        path = filedialog.askopenfilename(
+            title="Select WAV audio file",
+            initialdir=self.file_directory.get() or str(Path(__file__).resolve().parent),
+            filetypes=[("WAV audio", "*.wav"), ("All files", "*.*")],
+            parent=self,
+        )
+        if path:
+            selected = Path(path).expanduser().resolve()
+            self.selected_audio_path.set(str(selected))
+            self.file_directory.set(str(selected.parent))
+            self.refresh_file_list()
+            self.status.set(f"File assigned: {selected.name}")
+            self.log("INFO", f"Assigned selected_audio_path = {selected}")
+
+    def clear_selected_file(self):
+        self.selected_audio_path.set("")
+        self.file_list.selection_clear(0, "end")
+        self.status.set("Selected file cleared")
+        self.log("INFO", "Cleared selected_audio_path")
 
     def edit_parameters_gui(self):
         """Focus the editable mission fields and report their current values."""
@@ -359,18 +442,56 @@ class SpacecraftGUI(tk.Tk):
         self._confirm_telecommand("AD")
 
     def run_afsk_demodulator(self):
-        """Run the provided AFSK decoder and capture its output in the GUI."""
+        """Run signalFromSpace.py using the file assigned in File Management."""
+        raw_path = self.selected_audio_path.get().strip()
+        if not raw_path:
+            messagebox.showwarning("No input file selected",
+                                   "Select a WAV file in File Management before running the AFSK demodulator.",
+                                   parent=self)
+            return
+        audio_path = Path(raw_path).expanduser().resolve()
+        if not audio_path.is_file():
+            messagebox.showerror("Input file not found", f"The selected file does not exist:\n{audio_path}", parent=self)
+            return
+        if audio_path.suffix.lower() != ".wav":
+            messagebox.showerror("Invalid input file", "signalFromSpace.py requires a .wav file.", parent=self)
+            return
         script_path = Path(__file__).resolve().parent / "signalFromSpace.py"
         if not script_path.is_file():
-            self._not_wired("AFSK 1200 Demodulator", f"Required script not found:\n{script_path}")
+            self._not_wired("AFSK 1200 Demodulator", f"Required script was not found next to this GUI:\n{script_path}")
             return
-        self.status.set("Running AFSK 1200 demodulator…")
-        self.log("INFO", "Starting AFSK 1200 demodulator using signalFromSpace.py")
-        threading.Thread(
-            target=self._plain_script_worker,
-            args=(str(script_path), "AFSK 1200 Demodulator"),
-            daemon=True,
-        ).start()
+        self.status.set(f"Running AFSK demodulator on {audio_path.name}…")
+        self.log("INFO", f"Starting signalFromSpace.py with selected_audio_path={audio_path}")
+        threading.Thread(target=self._audio_script_worker,
+                         args=(str(script_path), str(audio_path), "AFSK 1200 Demodulator"),
+                         daemon=True).start()
+
+    def _audio_script_worker(self, script_path, audio_path, display_name):
+        try:
+            result = subprocess.run(
+                [sys.executable, script_path, audio_path],
+                capture_output=True, text=True, timeout=300, check=False,
+                cwd=str(Path(script_path).resolve().parent),
+            )
+            combined = result.stdout or ""
+            if result.stderr:
+                combined += "\n[stderr]\n" + result.stderr
+            if not combined.strip():
+                combined = "(The script produced no console output.)"
+            title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
+            self.after(0, lambda: self._write(title + "\n" + "=" * 60 + "\n\n" + combined))
+            self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
+            self.log("INFO" if result.returncode == 0 else "ERROR",
+                     f"{display_name} finished with exit code {result.returncode}")
+        except subprocess.TimeoutExpired:
+            self.after(0, lambda: self._write(f"{display_name.upper()}\n\nStopped waiting after 5 minutes."))
+            self.after(0, lambda: self.status.set(f"{display_name}: timed out"))
+            self.log("ERROR", f"{display_name} timed out after 300 seconds")
+        except OSError as exc:
+            message = str(exc)
+            self.after(0, lambda: self._write(f"Could not start {display_name}: {message}"))
+            self.after(0, lambda: self.status.set(f"{display_name}: failed to start"))
+            self.log("ERROR", f"Could not start {display_name}: {message}")
 
     def _plain_script_worker(self, script_path, display_name):
         try:
@@ -400,7 +521,7 @@ class SpacecraftGUI(tk.Tk):
 
 
     def run_eeprom_inspection(self):
-        self._run_config_script("scalpedPlatform.py", "Pass Prediction System")
+        self._run_config_script("scalpedPlatform.py", "EEPROM DUMP")
 
     def run_pass_prediction(self):
         self._run_config_script("firstContact.py", "Pass Prediction System")
