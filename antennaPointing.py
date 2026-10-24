@@ -14,6 +14,7 @@
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
+import argparse
 import socket
 import sys
 import json
@@ -26,20 +27,50 @@ from skyfield.api import EarthSatellite, load, wgs84
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
 # Version : CORE
-# Details : Define application variables
+# Details : Load application variables via JSON configuration or command-line
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
+if len(sys.argv) == 2 and sys.argv[1].lstrip().startswith("{"):
+    config = json.loads(sys.argv[1])
+else:
+    parser = argparse.ArgumentParser(description="Spacecraft tracking system")
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--spacecraft-id", type=int, required=True)
+    parser.add_argument("--virtual-channel-id", type=int, required=True)
+    parser.add_argument("--apid", type=int, required=True)
+    parser.add_argument("--payload", required=True)
+    parser.add_argument("--packet-count", type=int, required=True)
+    parser.add_argument("--tc-packet-count", type=int, required=True)
+    args = parser.parse_args()
+    config = {
+        "host": args.host,
+        "port": args.port,
+        "spacecraft_id": args.spacecraft_id,
+        "virtual_channel_id": args.virtual_channel_id,
+        "apid": args.apid,
+        "payload": args.payload,
+        "packet_count": args.packet_count,
+        "tc_packet_count": args.tc_packet_count,
+    }
 
-config = json.loads(sys.argv[1])
+host = config["host"]
+port = int(config["port"])
+spacecraft_id = int(config["spacecraft_id"])
+virtual_channel_id = int(config["virtual_channel_id"])
+apid = int(config["apid"])
+user_payload = config["payload"].encode("utf-8")
+packet_count = int(config["packet_count"])
+tc_packet_count = int(config["tc_packet_count"])
 
-HOST = config["host"]
-PORT = int(config["port"])
-SPACECRAFT_ID = int(config["spacecraft_id"])
-VIRTUAL_CHANNEL_ID = int(config["virtual_channel_id"])
-APID = int(config["apid"])
-payload = config["payload"]
-USER_PAYLOAD = payload.encode("utf-8") if isinstance(payload, str) else payload
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Define application variables
+# Modified: N/A
+# -------------------------------------------------------------------------------------
 
 VISIBILITY = 30.0
 SEARCH_HOURS = 48
@@ -254,10 +285,10 @@ def solve_challenge(tle1,tle2,lat,lon):
         points.append(f"{alt:.4f}:{az:.4f}")
     return first_second, points
 
-def main():
-    print(f"[+] Connecting to {HOST}:{PORT}")
+def trackingSystem():
+    print(f"[+] Connecting to {host}:{port}")
     try:
-        sock = socket.create_connection((HOST, PORT), timeout=10)
+        sock = socket.create_connection((host, port), timeout=10)
     except Exception as e:
         print(f"[!] Connection failed: {e}")
         sys.exit(1)
@@ -332,4 +363,4 @@ def main():
         print("[+] Connection closed.")
 
 if __name__ == "__main__":
-    main()
+    trackingSystem()

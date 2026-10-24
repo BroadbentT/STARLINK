@@ -14,31 +14,53 @@
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
+from pwn import hexdump,log,remote
 import argparse
 import struct
 import time
 import json
 import sys
 
-from pwn import hexdump, log, remote
-
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
 # Version : CORE
-# Details : Define application variables
+# Details : Load application variables via JSON configuration or command-line
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
-config = json.loads(sys.argv[1])
+if len(sys.argv) == 2 and sys.argv[1].lstrip().startswith("{"):
+    config = json.loads(sys.argv[1])
+else:
+    parser = argparse.ArgumentParser(description="Spacecraft packet sender")
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--spacecraft-id", type=int, required=True)
+    parser.add_argument("--virtual-channel-id", type=int, required=True)
+    parser.add_argument("--apid", type=int, required=True)
+    parser.add_argument("--payload", required=True)
+    parser.add_argument("--packet-count", type=int, required=True)
+    parser.add_argument("--tc-packet-count", type=int, required=True)
+    args = parser.parse_args()
+    config = {
+        "host": args.host,
+        "port": args.port,
+        "spacecraft_id": args.spacecraft_id,
+        "virtual_channel_id": args.virtual_channel_id,
+        "apid": args.apid,
+        "payload": args.payload,
+        "packet_count": args.packet_count,
+        "tc_packet_count": args.tc_packet_count,
+    }
 
-HOST = config["host"]
-PORT = int(config["port"])
-SPACECRAFT_ID = int(config["spacecraft_id"])
-VIRTUAL_CHANNEL_ID = int(config["virtual_channel_id"])
-APID = int(config["apid"])
-payload = config["payload"]
-USER_PAYLOAD = payload.encode("utf-8") if isinstance(payload, str) else payload
+host = config["host"]
+port = int(config["port"])
+spacecraft_id = int(config["spacecraft_id"])
+virtual_channel_id = int(config["virtual_channel_id"])
+apid = int(config["apid"])
+user_payload = config["payload"].encode("utf-8")
+packet_count = int(config["packet_count"])
+tc_packet_count = int(config["tc_packet_count"])
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -118,7 +140,7 @@ def parse_app_payload(payload: bytes):
     raise ValueError(f"unexpected application payload: {payload!r}")
 
 def parse_response(response: bytes):
-    packet = find_space_packet(response, APID)
+    packet = find_space_packet(response, apid)
     if packet:
         payload = packet["payload"]
         log.info(f"Space Packet payload: {payload!r}")
@@ -146,8 +168,8 @@ def recv_response(r, timeout: float = 4.0) -> bytes:
     return b"".join(chunks)
 
 def send_app_payload(r, tc_count: int, packet_count: int, app_payload: bytes):
-    space_packet = generate_space_packet(apid=APID,packet_count=packet_count,payload=app_payload,)
-    frame = generate_tc_frame(spacecraft_id=SPACECRAFT_ID,virtual_channel_id=VIRTUAL_CHANNEL_ID,tc_packet_count=tc_count,payload=space_packet,)
+    space_packet = generate_space_packet(apid=apid,packet_count=packet_count,payload=app_payload,)
+    frame = generate_tc_frame(spacecraft_id=spacecraft_id,virtual_channel_id=virtual_channel_id,tc_packet_count=tc_count,payload=space_packet,)
     log.info(f"Application payload: {app_payload!r}")
     log.info(f"Sending {len(frame)} bytes")
     log.info(hexdump(frame))
@@ -162,7 +184,7 @@ def send_command(r, tc_count: int, packet_count: int, counter: int, command: byt
     return send_app_payload(r,tc_count=tc_count,packet_count=packet_count,app_payload=encode_app_command(counter, command),)
 
 def run_once(flag_payload_builder):
-    r = remote(HOST, PORT)
+    r = remote(host, port)
     begin_response = send_command(r,tc_count=0,packet_count=0,counter=0,command=b"BEGIN",)
     counter, body = parse_response(begin_response)   
     log.info(f"BEGIN counter={counter}, body={body!r}")
@@ -182,12 +204,12 @@ def run_once(flag_payload_builder):
     r.close()
     return b"invalid payload" not in flag_response and b"Expected " not in flag_response
 
-def main():
+def adTeleCommand():
     attempts = [
-        ("0xNN:PAYLOAD", lambda counter: encode_app_command(counter, USER_PAYLOAD)),
-        ("0xNN+1:PAYLOAD", lambda counter: encode_app_command((counter + 1) & 0xFF, USER_PAYLOAD)),
-        ("NN:PAYLOAD", lambda counter: f"{counter:02x}:".encode() + USER_PAYLOAD),
-        ("0xNNGETPAYLOAD", lambda counter: f"0x{counter:02x}".encode() + USER_PAYLOAD),
+        ("0xNN:PAYLOAD", lambda counter: encode_app_command(counter, user_payload)),
+        ("0xNN+1:PAYLOAD", lambda counter: encode_app_command((counter + 1) & 0xFF, user_payload)),
+        ("NN:PAYLOAD", lambda counter: f"{counter:02x}:".encode() + user_payload),
+        ("0xNNGETPAYLOAD", lambda counter: f"0x{counter:02x}".encode() + user_payload),
     ]
     for name, builder in attempts:
         log.info(f"Trying USER_PAYLOAD payload format: {name}")
@@ -196,4 +218,4 @@ def main():
     log.failure("All targeted USER_PAYLOAD payload formats were rejected")
 
 if __name__ == "__main__":
-    main()
+    adTeleCommand()

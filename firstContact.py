@@ -14,6 +14,7 @@
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
+import argparse
 import socket
 import math
 import json
@@ -28,24 +29,54 @@ from sgp4.api import jday
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
 # Version : CORE
+# Details : Load application variables via JSON configuration or command-line
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+if len(sys.argv) == 2 and sys.argv[1].lstrip().startswith("{"):
+    config = json.loads(sys.argv[1])
+else:
+    parser = argparse.ArgumentParser(description="Spacecraft pass prediction system")
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--spacecraft-id", type=int, required=True)
+    parser.add_argument("--virtual-channel-id", type=int, required=True)
+    parser.add_argument("--apid", type=int, required=True)
+    parser.add_argument("--payload", required=True)
+    parser.add_argument("--packet-count", type=int, required=True)
+    parser.add_argument("--tc-packet-count", type=int, required=True)
+    args = parser.parse_args()
+    config = {
+        "host": args.host,
+        "port": args.port,
+        "spacecraft_id": args.spacecraft_id,
+        "virtual_channel_id": args.virtual_channel_id,
+        "apid": args.apid,
+        "payload": args.payload,
+        "packet_count": args.packet_count,
+        "tc_packet_count": args.tc_packet_count,
+    }
+
+host = config["host"]
+port = int(config["port"])
+spacecraft_id = int(config["spacecraft_id"])
+virtual_channel_id = int(config["virtual_channel_id"])
+apid = int(config["apid"])
+user_payload = config["payload"].encode("utf-8")
+packet_count = int(config["packet_count"])
+tc_packet_count = int(config["tc_packet_count"])
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
 # Details : Define application variables
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
-config = json.loads(sys.argv[1])
-
-host = config["host"]
-port = int(config["port"])
-SPACECRAFT_ID = int(config["spacecraft_id"])
-VIRTUAL_CHANNEL_ID = int(config["virtual_channel_id"])
-APID = int(config["apid"])
-payload = config["payload"]
-USER_PAYLOAD = payload.encode("utf-8") if isinstance(payload, str) else payload
-
 ELEVATION_THRESHOLD = 30.0
 SEARCH_SECONDS = 24 * 60 * 60
 STEP_SECONDS = 10
-
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -274,7 +305,7 @@ def recv_until_quiet(sock, timeout=1.0):
             break
     return b"".join(chunks).decode(errors="replace")
 
-def main():
+def passPrediction():
     print(f"[*] Connecting to {host}:{port}")
     with socket.create_connection((host, port),timeout=10,) as sock:
         # Give the server a moment to send the question.
@@ -317,4 +348,4 @@ def main():
                 continue
 
 if __name__ == "__main__":
-    main()
+    passPrediction()
