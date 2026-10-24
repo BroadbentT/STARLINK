@@ -50,7 +50,7 @@ DEFAULTS = {
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
 # Version : CORE
-# Details : Create functional subroutines called from main.
+# Details : Create functional subroutines called from class.
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
@@ -81,8 +81,7 @@ def ccsds_fecf(data: bytes) -> int:
                 crc = (crc << 1) & 0xFFFF
     return crc
 
-def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,
-                      tc_packet_count: int, payload: bytes) -> bytes:
+def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_count: int, payload: bytes) -> bytes:
     if not 0 <= spacecraft_id <= 0x3FF:
         raise ValueError("Spacecraft ID must fit in 10 bits (0–1023).")
     if not 0 <= virtual_channel_id <= 0x3F:
@@ -100,21 +99,26 @@ def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,
         spacecraft_id & 0xFF,
         (virtual_channel_id << 2) | ((frame_length >> 8) & 0x03),
         frame_length & 0xFF,
-        tc_packet_count,
-    ])
+        tc_packet_count,])
     without_fecf = header + payload
     return without_fecf + ccsds_fecf(without_fecf).to_bytes(2, "big")
 
-def hex_dump(data: bytes, width: int = 16) -> str:
-    if not data:
-        return "<empty>"
+def hex_dump(data, width=16):
     lines = []
     for offset in range(0, len(data), width):
         chunk = data[offset:offset + width]
         hex_part = " ".join(f"{b:02x}" for b in chunk)
-        ascii_part = "".join(chr(b) if 32 <= b <= 126 else "." for b in chunk)
-        lines.append(f"{offset:04x}  {hex_part:<{width * 3 - 1}}  |{ascii_part}|")
+        ascii_part = "".join(chr(b) if 32 <= b <= 126 else f"\\x{b:02x}" for b in chunk) 
+        lines.append(f"{offset:04x} {hex_part:<{width * 3 - 1}} |{ascii_part}|")
     return "\n".join(lines)
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Create class gui and loop.
+# Modified: N/A
+# -------------------------------------------------------------------------------------
 
 class SpacecraftGUI(tk.Tk):
     def __init__(self):
@@ -137,14 +141,8 @@ class SpacecraftGUI(tk.Tk):
                   font=("Segoe UI", 17, "bold")).pack(anchor="w")
         ttk.Label(header, text="The Consultative Committee for Space Data Systems",
                   font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 0))
-
-        warning = ttk.Label(
-            self,
-            text="LAB TARGETS ONLY: live operations may send commands or read target data; always verify host and port first.",
-            foreground="#9a3412"
-        )
+        warning = ttk.Label(self,text="LAB TARGETS ONLY: live operations may send commands or read target data; always verify host and port first.",foreground="#9a3412")
         warning.pack(anchor="w", pady=(0, 10))
-
         workspace = ttk.Panedwindow(self, orient="vertical")
         workspace.pack(fill="both", expand=True)
         main = ttk.Panedwindow(workspace, orient="horizontal")
@@ -153,22 +151,18 @@ class SpacecraftGUI(tk.Tk):
         right = ttk.Frame(main)
         main.add(left, weight=1)
         main.add(right, weight=2)
-
         params = ttk.LabelFrame(left, text="Mission parameters", padding=10)
         params.pack(fill="x")
         # Convenience endpoint input: enter HOST:PORT once, then split it into
         # the two independent fields below. Host and port remain editable alone.
         ttk.Label(params, text="Target endpoint (IP:PORT)").grid(
-            row=0, column=0, sticky="w", pady=4
-        )
+            row=0, column=0, sticky="w", pady=4)
         self.endpoint_var = tk.StringVar()
         endpoint_entry = ttk.Entry(params, textvariable=self.endpoint_var, width=22)
         endpoint_entry.grid(row=0, column=1, sticky="ew", padx=(8, 4), pady=4)
         ttk.Button(params, text="Split", command=self.apply_endpoint).grid(
-            row=0, column=2, sticky="ew", padx=(0, 0), pady=4
-        )
+            row=0, column=2, sticky="ew", padx=(0, 0), pady=4)
         endpoint_entry.bind("<Return>", lambda _event: self.apply_endpoint())
-
         fields = [
             ("host", "Target IP / hostname"),
             ("port", "Target TCP port (1–65535)"),
@@ -176,23 +170,18 @@ class SpacecraftGUI(tk.Tk):
             ("virtual_channel_id", "Virtual channel ID (0–63)"),
             ("apid", "APID (0–2047)"),
             ("packet_count", "Space packet sequence (0–16383)"),
-            ("tc_packet_count", "TC frame sequence (0–255)"),
-        ]
+            ("tc_packet_count", "TC frame sequence (0–255)"),]
         for row, (key, label) in enumerate(fields, start=1):
             ttk.Label(params, text=label).grid(row=row, column=0, sticky="w", pady=4)
             var = tk.StringVar()
             self.vars[key] = var
             ttk.Entry(params, textvariable=var, width=22).grid(
-                row=row, column=1, columnspan=2, sticky="ew", padx=(8, 0), pady=4
-            )
+                row=row, column=1, columnspan=2, sticky="ew", padx=(8, 0), pady=4)
         params.columnconfigure(1, weight=1)
-
-        # Payload and File Management are side-by-side; the terminal remains below.
         left_detail_panes = ttk.Panedwindow(left, orient="vertical")
         left_detail_panes.pack(fill="both", expand=True, pady=(10, 0))
         content_panes = ttk.Panedwindow(left_detail_panes, orient="horizontal")
         left_detail_panes.add(content_panes, weight=3)
-
         payload_frame = ttk.LabelFrame(content_panes, text="Payload", padding=10)
         content_panes.add(payload_frame, weight=1)
         self.payload_mode = tk.StringVar(value="text")
@@ -206,7 +195,6 @@ class SpacecraftGUI(tk.Tk):
         self.payload_text.pack(fill="both", expand=True)
         ttk.Label(payload_frame, text="Hex mode accepts spaces, colons, or hyphens.",
                   foreground="gray").pack(anchor="w", pady=(5, 0))
-
         file_frame = ttk.LabelFrame(content_panes, text="File Management", padding=10)
         content_panes.add(file_frame, weight=1)
         self.selected_audio_path = tk.StringVar(value="")
@@ -228,29 +216,21 @@ class SpacecraftGUI(tk.Tk):
         ttk.Label(file_frame, text="Assigned variable: selected_audio_path").pack(anchor="w", pady=(7, 0))
         ttk.Entry(file_frame, textvariable=self.selected_audio_path, state="readonly").pack(fill="x", pady=(2, 0))
         self.refresh_file_list()
-
-
-        # The original console's complete 12-operation menu is represented here.
-        # Split the right-hand workspace so the operation list remains visible while
-        # output is displayed. Telecommand helpers are launched with explicit confirmation; every helper
-        # process output is captured into the GUI output pane and terminal log.
         right_workspace = ttk.Panedwindow(right, orient="vertical")
         right_workspace.pack(fill="both", expand=True)
-
         operations_frame = ttk.LabelFrame(right_workspace, text="Operations — full menu", padding=8)
         right_workspace.add(operations_frame, weight=2)
         operation_specs = [
-            ("01  Preview CCSDS Frame", self.preview, True),
-            ("02  Display Raw Packet", self.raw_dump, True),
-            ("03  Check Connection to Spacecraft", self.test_connection, True),
-            ("04  Transmit TM Type Telecommand", self.run_tm_telecommand, True),
-            ("05  Transmit AD Type Telecommand", self.run_ad_telecommand, True),
-            ("06  Dump Spacecraft EEPROM data", self.run_eeprom_inspection, True),
-            ("07  Pass Prediction System", self.run_pass_prediction, True),
-            ("08  Automated Tracking System", self.run_automated_tracking, True),
-            ("09  Demodulate AFSK 1200 signals", self.run_afsk_demodulator, True),
-            ("10  Groundstation Security Check", self.run_groundstation_security_check, True),
-        ]
+            ("Preview CCSDS Frame", self.preview, True),
+            ("Check Connection to Spacecraft", self.test_connection, True),
+            ("Transmit TM Type Telecommand", self.run_tm_telecommand, True),
+            ("Transmit AD Type Telecommand", self.run_ad_telecommand, True),
+            ("Dump Spacecraft EEPROM data", self.run_eeprom_inspection, True),
+            ("Pass Prediction System", self.run_pass_prediction, True),
+            ("Automated Tracking System", self.run_automated_tracking, True),
+            ("Demodulate AFSK 1200 signals", self.run_afsk_demodulator, True),
+            ("Groundstation Security Check", self.run_groundstation_security_check, True),
+            ("Exit", self.destroy, True),]
         for index, (label, command, enabled) in enumerate(operation_specs):
             button = ttk.Button(operations_frame, text=label, command=command)
             button.grid(row=index // 2, column=index % 2, sticky="ew", padx=4, pady=3)
@@ -258,14 +238,11 @@ class SpacecraftGUI(tk.Tk):
                 button.configure(state="disabled")
         operations_frame.columnconfigure(0, weight=1)
         operations_frame.columnconfigure(1, weight=1)
-
         output_frame = ttk.LabelFrame(right_workspace, text="Output", padding=8)
         right_workspace.add(output_frame, weight=2)
-        self.output = ScrolledText(output_frame, height=10, wrap="none", font=("Consolas", 9),
-                                   undo=False)
+        self.output = ScrolledText(output_frame, height=10, wrap="none", font=("Consolas", 9),undo=False)
         self.output.pack(fill="both", expand=True)
         self.output.configure(state="disabled")
-
         terminal_frame = ttk.LabelFrame(left_detail_panes, text="Terminal / diagnostic log", padding=6)
         left_detail_panes.add(terminal_frame, weight=1)
         terminal_toolbar = ttk.Frame(terminal_frame)
@@ -275,7 +252,6 @@ class SpacecraftGUI(tk.Tk):
         ttk.Button(terminal_toolbar, text="Save log…", command=self.save_log).pack(side="left", padx=(5, 0))
         self.terminal = ScrolledText(terminal_frame, height=5, wrap="word", font=("Consolas", 9), state="disabled")
         self.terminal.pack(fill="both", expand=True)
-
         self.status = tk.StringVar(value="Starting…")
         ttk.Label(self, textvariable=self.status, relief="sunken",
                   anchor="w", padding=(6, 4)).pack(fill="x", pady=(10, 0))
@@ -323,8 +299,7 @@ class SpacecraftGUI(tk.Tk):
             title="Select WAV audio file",
             initialdir=self.file_directory.get() or str(Path(__file__).resolve().parent),
             filetypes=[("WAV audio", "*.wav"), ("All files", "*.*")],
-            parent=self,
-        )
+            parent=self,)
         if path:
             selected = Path(path).expanduser().resolve()
             self.selected_audio_path.set(str(selected))
@@ -350,27 +325,7 @@ class SpacecraftGUI(tk.Tk):
         self.status.set("Edit mission parameters in the left panel")
         self.log("INFO", "Edit Mission Parameters selected")
 
-    def prepare_telecommand(self, command_type):
-        """Build and display a telecommand frame locally; never transmit it."""
-        try:
-            cfg = self._get_config()
-            packet, frame = self._build(cfg)
-            self._write(
-                f"{command_type} TELECOMMAND — OFFLINE PREPARATION\n" + "=" * 60 + "\n\n"
-                + f"Destination configured: {cfg['host']}:{cfg['port']}\n"
-                + f"Spacecraft ID: {cfg['spacecraft_id']}  |  Virtual channel: {cfg['virtual_channel_id']}\n"
-                + f"APID: {cfg['apid']}  |  Payload length: {len(cfg['payload'])} bytes\n\n"
-                + "SPACE PACKET HEX\n" + packet.hex(" ") + "\n\n"
-                + "TRANSFER FRAME HEX\n" + frame.hex(" ") + "\n\n"
-                + "Safety: frame generated locally only. No telecommand was transmitted."
-            )
-            self.status.set(f"{command_type} telecommand prepared offline")
-        except ValueError as exc:
-            messagebox.showerror("Telecommand preparation", str(exc))
-            self.status.set("Telecommand preparation failed")
-
     def _run_config_script(self, script_name, display_name):
-        """Run a bundled helper script with current settings and show its output."""
         script_path = Path(__file__).resolve().parent / script_name
         if not script_path.is_file():
             self._not_wired(display_name, f"Required script was not found next to this GUI:\n{script_path}")
@@ -388,23 +343,21 @@ class SpacecraftGUI(tk.Tk):
         threading.Thread(
             target=self._script_worker,
             args=(str(script_path), json.dumps(config_for_script), display_name),
-            daemon=True,
-        ).start()
+            daemon=True,).start()
 
     def _script_worker(self, script_path, config_json, display_name):
         try:
             result = subprocess.run(
                 [sys.executable, script_path, config_json],
                 capture_output=True, text=True, timeout=300, check=False,
-                cwd=str(Path(script_path).resolve().parent),
-            )
+                cwd=str(Path(script_path).resolve().parent),)
             combined = (result.stdout or "")
             if result.stderr:
                 combined += "\n[stderr]\n" + result.stderr
             if not combined.strip():
                 combined = "(The script produced no console output.)"
             title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
-            self.after(0, lambda: self._write(title + "\n" + "=" * 60 + "\n\n" + combined))
+            self.after(0, lambda: self._write(title + "\n" + "=" * 106 + "\n\n" + combined))
             self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
             self.log("INFO" if result.returncode == 0 else "ERROR", f"{display_name} finished with exit code {result.returncode}")
         except subprocess.TimeoutExpired:
@@ -471,15 +424,14 @@ class SpacecraftGUI(tk.Tk):
             result = subprocess.run(
                 [sys.executable, script_path, audio_path],
                 capture_output=True, text=True, timeout=300, check=False,
-                cwd=str(Path(script_path).resolve().parent),
-            )
+                cwd=str(Path(script_path).resolve().parent),)
             combined = result.stdout or ""
             if result.stderr:
                 combined += "\n[stderr]\n" + result.stderr
             if not combined.strip():
                 combined = "(The script produced no console output.)"
             title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
-            self.after(0, lambda: self._write(title + "\n" + "=" * 60 + "\n\n" + combined))
+            self.after(0, lambda: self._write(title + "\n" + "=" * 106 + "\n\n" + combined))
             self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
             self.log("INFO" if result.returncode == 0 else "ERROR",
                      f"{display_name} finished with exit code {result.returncode}")
@@ -498,15 +450,14 @@ class SpacecraftGUI(tk.Tk):
             result = subprocess.run(
                 [sys.executable, script_path], capture_output=True, text=True,
                 timeout=300, check=False,
-                cwd=str(Path(script_path).resolve().parent),
-            )
+                cwd=str(Path(script_path).resolve().parent),)
             combined = result.stdout or ""
             if result.stderr:
                 combined += "\n[stderr]\n" + result.stderr
             if not combined.strip():
                 combined = "(The script produced no console output.)"
             title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
-            self.after(0, lambda: self._write(title + "\n" + "=" * 60 + "\n\n" + combined))
+            self.after(0, lambda: self._write(title + "\n" + "=" * 106 + "\n\n" + combined))
             self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
             self.log("INFO" if result.returncode == 0 else "ERROR", f"{display_name} finished with exit code {result.returncode}")
         except subprocess.TimeoutExpired:
@@ -518,7 +469,6 @@ class SpacecraftGUI(tk.Tk):
             self.after(0, lambda: self._write(f"Could not start {display_name}: {message}"))
             self.after(0, lambda: self.status.set(f"{display_name}: failed to start"))
             self.log("ERROR", f"Could not start {display_name}: {message}")
-
 
     def run_eeprom_inspection(self):
         self._run_config_script("scalpedPlatform.py", "EEPROM DUMP")
@@ -542,8 +492,7 @@ class SpacecraftGUI(tk.Tk):
         base = Path(__file__).resolve().parent
         expected_scripts = [
             "tmTelecommand.py", "adTelecommand.py", "firstContact.py",
-            "antennaPointing.py", "signalFromSpace.py",
-        ]
+            "antennaPointing.py", "signalFromSpace.py",]
         try:
             cfg = self._get_config()
             config_lines = [
@@ -552,15 +501,12 @@ class SpacecraftGUI(tk.Tk):
                 f"Spacecraft ID: {cfg['spacecraft_id']}",
                 f"Virtual channel ID: {cfg['virtual_channel_id']}",
                 f"APID: {cfg['apid']}",
-                f"Payload length: {len(cfg['payload'])} bytes",
-            ]
+                f"Payload length: {len(cfg['payload'])} bytes",]
         except ValueError as exc:
             config_lines = [f"Configuration validation: FAILED — {exc}"]
-
-        script_lines = [f"{'FOUND' if (base / name).is_file() else 'MISSING'}  {name}"
-                        for name in expected_scripts]
+        script_lines = [f"{'FOUND' if (base / name).is_file() else 'MISSING'}  {name}" for name in expected_scripts]
         report = (
-            "GROUNDSTATION SECURITY CHECK — SAFE LOCAL AUDIT\n" + "=" * 60 + "\n\n"
+            "GROUNDSTATION SECURITY CHECK — SAFE LOCAL AUDIT\n" + "=" * 106 + "\n\n"
             + "No exploit, login attempt, or command was sent. This checks only local settings and helper files.\n\n"
             + "MISSION CONFIGURATION\n" + "-" * 24 + "\n"
             + "\n".join(config_lines) + "\n\n"
@@ -574,7 +520,7 @@ class SpacecraftGUI(tk.Tk):
 
     def _not_wired(self, title, reason):
         self._write(
-            title.upper() + "\n" + "=" * 60 + "\n\n"
+            title.upper() + "\n" + "=" * 106 + "\n\n"
             + reason + "\n\n"
             + "This option is displayed to match the original console menu, but it is not active in this GUI."
         )
@@ -582,7 +528,6 @@ class SpacecraftGUI(tk.Tk):
         self.log("WARNING", f"{title} selected but not executed: {reason}")
 
     def apply_endpoint(self):
-        """Split a HOST:PORT convenience value into the separate fields."""
         raw = self.endpoint_var.get().strip()
         if not raw:
             return
@@ -591,8 +536,7 @@ class SpacecraftGUI(tk.Tk):
         if not separator or not host.strip() or not port_text.strip():
             messagebox.showerror(
                 "Invalid endpoint", "Enter the endpoint as HOST:PORT, for example 154.57.164.68:33366.",
-                parent=self,
-            )
+                parent=self,)
             return
         host = host.strip()
         if host.startswith("[") and host.endswith("]"):
@@ -694,25 +638,7 @@ class SpacecraftGUI(tk.Tk):
             self.log("ERROR", f"TCP connection failed for {host}:{port}: {exc}")
             self.after(0, lambda: self.status.set(f"TCP connection failed: {host}:{port}"))
 
-    def decode_hex_dialog(self):
-        raw = simpledialog.askstring("Decode hex bytes", "Enter hex bytes (spaces, colons, or hyphens allowed):", parent=self)
-        if raw is None:
-            return
-        try:
-            cleaned = raw.replace(" ", "").replace(":", "").replace("-", "").replace("_", "")
-            data = bytes.fromhex(cleaned)
-            if not data:
-                raise ValueError("Enter at least one byte.")
-            self._write("HEX DECODE\n" + "=" * 50 + "\n" + hex_dump(data) + "\n\n"
-                         + f"Length: {len(data)} bytes\nASCII: {''.join(chr(b) if 32 <= b <= 126 else '.' for b in data)}")
-            self.log("SUCCESS", f"Decoded {len(data)} hex bytes")
-        except ValueError as exc:
-            self.log("ERROR", f"Invalid hex input: {exc}")
-            messagebox.showerror("Invalid hex", str(exc))
-
     def _get_config(self):
-        # Be forgiving: pressing an operation while the convenience field still
-        # contains HOST:PORT applies it automatically.
         if self.endpoint_var.get().strip():
             self.apply_endpoint()
             if self.endpoint_var.get().strip():
@@ -738,7 +664,6 @@ class SpacecraftGUI(tk.Tk):
             if not low <= value <= high:
                 raise ValueError(f"{key.replace('_', ' ').title()} must be between {low} and {high}.")
             result[key] = value
-
         raw_payload = self.payload_text.get("1.0", "end-1c")
         if self.payload_mode.get() == "text":
             payload = raw_payload.encode("utf-8")
@@ -768,8 +693,7 @@ class SpacecraftGUI(tk.Tk):
                 f"Payload length: {len(cfg['payload'])} bytes\n"
                 f"Payload hex: {cfg['payload'].hex(' ')}\n"
                 f"Space packet length: {len(packet)} bytes\n"
-                f"Transfer frame length: {len(frame)} bytes"
-            )
+                f"Transfer frame length: {len(frame)} bytes")
             self.status.set("Configuration validated")
         except ValueError as exc:
             messagebox.showerror("Validation error", str(exc))
@@ -778,73 +702,51 @@ class SpacecraftGUI(tk.Tk):
     @staticmethod
     def _build(cfg):
         packet = generate_space_packet(cfg["apid"], cfg["packet_count"], cfg["payload"])
-        frame = generate_tc_frame(cfg["spacecraft_id"], cfg["virtual_channel_id"],
-                                  cfg["tc_packet_count"], packet)
+        frame = generate_tc_frame(cfg["spacecraft_id"], cfg["virtual_channel_id"],cfg["tc_packet_count"], packet)
         return packet, frame
 
     def preview(self):
         try:
             cfg = self._get_config()
             packet, frame = self._build(cfg)
-            fecf_ok = ccsds_fecf(frame[:-2]) == int.from_bytes(frame[-2:], "big")
-            self._write(
+            fecf_ok = (len(frame) >= 2 and ccsds_fecf(frame[:-2]) == int.from_bytes(frame[-2:], "big"))
+            packet_length_field = (int.from_bytes(packet[4:6], "big") if len(packet) >= 6 else None)
+            separator = "_" * 106
+            output = (
                 "CCSDS PACKET PREVIEW (offline)\n"
-                + "=" * 68 + "\n\n"
-                + "SPACE PACKET\n" + "-" * 68 + "\n"
-                + f"Length: {len(packet)} bytes\nHEX: {packet.hex(' ')}\n\n"
-                + "TC TRANSFER FRAME\n" + "-" * 68 + "\n"
-                + f"Length: {len(frame)} bytes\nHEX: {frame.hex(' ')}\n\n"
-                + "FRAME CHECKS\n" + "-" * 68 + "\n"
-                + f"Space packet length field: {int.from_bytes(packet[4:6], 'big')}\n"
-                + f"Space packet expected length: {int.from_bytes(packet[4:6], 'big') + 7}\n"
-                + f"Transfer frame FECF: {frame[-2:].hex(' ')}\n"
-                + f"FECF validation: {'VALID' if fecf_ok else 'INVALID'}\n"
-                + "\nNo bytes were transmitted."
-            )
+                + separator + "\n\n"
+                + "SPACE PACKET\n"
+                + separator + "\n"
+                + f"Length: {len(packet)} bytes\n"
+                + f"HEX: {packet.hex(' ')}\n"
+                + "ASCII: "
+                + "".join(chr(b) if 32 <= b <= 126 else "░" for b in packet) + "\n\n"
+                + "TC TRANSFER FRAME\n"
+                + separator + "\n"
+                + f"Length: {len(frame)} bytes\n"
+                + f"HEX: {frame.hex(' ')}\n"
+                + "ASCII: "
+                + "".join(chr(b) if 32 <= b <= 126 else "░" for b in frame) + "\n\n"
+                + "FRAME CHECKS\n"
+                + separator + "\n"
+                + (f"Space packet length field: {packet_length_field}\n"
+                    f"Space packet expected length: {packet_length_field + 7}\n"
+                    if packet_length_field is not None
+                    else "Space packet length field: unavailable\n")
+                + (f"Transfer frame FECF: {frame[-2:].hex(' ')}\n"
+                    if len(frame) >= 2
+                    else "Transfer frame FECF: unavailable\n")
+                + f"FECF validation: {'VALID' if fecf_ok else 'INVALID'}\n\n"
+                + "FULL HEX DUMP\n"
+                + separator + "\n"
+                + hex_dump(frame) + "\n\n"
+                + "No bytes were transmitted.\n"
+                + separator + "\n")
+            self._write(output)
             self.status.set("Packet preview generated locally")
         except ValueError as exc:
             messagebox.showerror("Packet error", str(exc))
             self.status.set("Preview failed")
-
-    def raw_dump(self):
-        try:
-            cfg = self._get_config()
-            packet, frame = self._build(cfg)
-            self._write(
-                "RAW PACKET OUTPUT (offline)\n" + "=" * 68 + "\n\n"
-                + "SPACE PACKET\n" + "-" * 68 + "\n"
-                + packet.hex(" ") + "\n\n"
-                + "TC TRANSFER FRAME\n" + "-" * 68 + "\n"
-                + frame.hex(" ") + "\n\n"
-                + "FULL HEX DUMP\n" + "-" * 68 + "\n"
-                + hex_dump(frame)
-            )
-            self.status.set("Hex dump generated")
-        except ValueError as exc:
-            messagebox.showerror("Packet error", str(exc))
-            self.status.set("Hex dump failed")
-
-    def show_parameters(self):
-        try:
-            cfg = self._get_config()
-            self._write(
-                "MISSION PARAMETERS\n" + "=" * 50 + "\n"
-                + f"Target host: {cfg['host']}\n"
-                + f"Target port: {cfg['port']}\n"
-                + f"Spacecraft ID: {cfg['spacecraft_id']}\n"
-                + f"Virtual channel ID: {cfg['virtual_channel_id']}\n"
-                + f"APID: {cfg['apid']}\n"
-                + f"Space packet count: {cfg['packet_count']}\n"
-                + f"TC frame sequence: {cfg['tc_packet_count']}\n"
-                + f"Payload repr: {cfg['payload']!r}\n"
-                + f"Payload hex: {cfg['payload'].hex(' ')}\n"
-                + "\nTCP test opens and closes a socket only; no application payload is sent."
-            )
-            self.status.set("Mission parameters displayed")
-        except ValueError as exc:
-            messagebox.showerror("Validation error", str(exc))
-            self.status.set("Parameter validation failed")
-
 
 if __name__ == "__main__":
     app = SpacecraftGUI()
