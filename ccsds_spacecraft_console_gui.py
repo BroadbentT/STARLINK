@@ -314,17 +314,6 @@ class SpacecraftGUI(tk.Tk):
         self.status.set("Selected file cleared")
         self.log("INFO", "Cleared selected_audio_path")
 
-    def edit_parameters_gui(self):
-        """Focus the editable mission fields and report their current values."""
-        self._write(
-            "EDIT MISSION PARAMETERS\n" + "=" * 50 + "\n"
-            + "Edit the mission fields in the left-hand panel, then select Apply / Validate.\n\n"
-            + "Fields: target host, TCP port, spacecraft ID, virtual channel ID, APID,\n"
-            + "space-packet sequence count, TC-frame sequence count, and payload."
-        )
-        self.status.set("Edit mission parameters in the left panel")
-        self.log("INFO", "Edit Mission Parameters selected")
-
     def _run_config_script(self, script_name, display_name):
         script_path = Path(__file__).resolve().parent / script_name
         if not script_path.is_file():
@@ -371,7 +360,6 @@ class SpacecraftGUI(tk.Tk):
             self.log("ERROR", f"Could not start {display_name}: {message}")
 
     def _confirm_telecommand(self, command_type):
-        """Require explicit confirmation before launching a transmission helper."""
         script = "tmTelecommand.py" if command_type == "TM" else "adTelecommand.py"
         script_path = Path(__file__).resolve().parent / script
         if not script_path.is_file():
@@ -445,45 +433,21 @@ class SpacecraftGUI(tk.Tk):
             self.after(0, lambda: self.status.set(f"{display_name}: failed to start"))
             self.log("ERROR", f"Could not start {display_name}: {message}")
 
-    def _plain_script_worker(self, script_path, display_name):
-        try:
-            result = subprocess.run(
-                [sys.executable, script_path], capture_output=True, text=True,
-                timeout=300, check=False,
-                cwd=str(Path(script_path).resolve().parent),)
-            combined = result.stdout or ""
-            if result.stderr:
-                combined += "\n[stderr]\n" + result.stderr
-            if not combined.strip():
-                combined = "(The script produced no console output.)"
-            title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
-            self.after(0, lambda: self._write(title + "\n" + "=" * 106 + "\n\n" + combined))
-            self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
-            self.log("INFO" if result.returncode == 0 else "ERROR", f"{display_name} finished with exit code {result.returncode}")
-        except subprocess.TimeoutExpired:
-            self.after(0, lambda: self._write(f"{display_name.upper()}\n\nStopped waiting after 5 minutes; check the helper script."))
-            self.after(0, lambda: self.status.set(f"{display_name}: timed out"))
-            self.log("ERROR", f"{display_name} timed out after 300 seconds")
-        except OSError as exc:
-            message = str(exc)
-            self.after(0, lambda: self._write(f"Could not start {display_name}: {message}"))
-            self.after(0, lambda: self.status.set(f"{display_name}: failed to start"))
-            self.log("ERROR", f"Could not start {display_name}: {message}")
-
     def run_eeprom_inspection(self):
-        self._run_config_script("scalpedPlatform.py", "EEPROM DUMP")
+        if not messagebox.askyesno("Confirm EEPROM dump","This launches scalpedPlatform.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+            self.log("INFO", "EEPROM dump cancelled by user")
+            return
+        self._run_config_script("scalpedPlatform.py", "EEPROM Dump")
 
     def run_pass_prediction(self):
+        if not messagebox.askyesno("Confirm pass prediction system","This launches firstContact.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+            self.log("INFO", "Pass prediction system cancelled by user")
+            return
         self._run_config_script("firstContact.py", "Pass Prediction System")
 
     def run_automated_tracking(self):
-        if not messagebox.askyesno(
-            "Confirm automated tracking",
-            "This launches antennaPointing.py, which may control physical antenna hardware.\n\n"
-            "Only continue if you are authorised and the antenna system is safe to move.",
-            parent=self,
-        ):
-            self.log("INFO", "Automated tracking launch cancelled by user")
+        if not messagebox.askyesno("Confirm automated tracking","This launches antennaPointing.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+            self.log("INFO", "Automated tracking cancelled by user")
             return
         self._run_config_script("antennaPointing.py", "Automated Tracking System")
 
