@@ -18,11 +18,6 @@
 #  4. Download the image, OCR the flag with tesseract.
 # -------------------------------------------------------------------------------------
 
-"""
-Usage:
-  python3 solve.py [WEB_HOST] [WEB_PORT] [TM_HOST] [TM_PORT]
-"""
-
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
@@ -42,6 +37,50 @@ import sys
 import io
 import re
 import os
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Load application variables via JSON configuration or command-line
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+if len(sys.argv) == 2 and sys.argv[1].lstrip().startswith("{"):
+    config = json.loads(sys.argv[1])
+else:
+    parser = argparse.ArgumentParser(description="Spacecraft tracking system")
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--listening port", type=int, required=True)
+    parser.add_argument("--spacecraft-id", type=int, required=True)
+    parser.add_argument("--virtual-channel-id", type=int, required=True)
+    parser.add_argument("--apid", type=int, required=True)
+    parser.add_argument("--payload", required=True)
+    parser.add_argument("--packet-count", type=int, required=True)
+    parser.add_argument("--tc-packet-count", type=int, required=True)
+    args = parser.parse_args()
+    config = {
+        "host": args.host,
+        "port": args.port,
+        "port2": args.port2,
+        "spacecraft_id": args.spacecraft_id,
+        "virtual_channel_id": args.virtual_channel_id,
+        "apid": args.apid,
+        "payload": args.payload,
+        "packet_count": args.packet_count,
+        "tc_packet_count": args.tc_packet_count,
+    }
+
+host = config["host"]
+port = int(config["port"])
+port2 = int(config["port2"])
+spacecraft_id = int(config["spacecraft_id"])
+virtual_channel_id = int(config["virtual_channel_id"])
+apid = int(config["apid"])
+user_payload = config["payload"].encode("utf-8")
+packet_count = int(config["packet_count"])
+tc_packet_count = int(config["tc_packet_count"])
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -91,16 +130,10 @@ def restore_terminal_echo():
 def main():
     restore_terminal_echo()
     print()
-    parser = argparse.ArgumentParser(usage="solve.py [WEB_HOST] [WEB_PORT] [TM_HOST] [TM_PORT]")
-    parser.add_argument("WEB_HOST", nargs="?")
-    parser.add_argument("WEB_PORT", nargs="?", type=int)
-    parser.add_argument("TM_HOST", nargs="?")
-    parser.add_argument("TM_PORT", nargs="?", type=int)
-    args = parser.parse_args()
-    WEB_HOST = ask_value(args.WEB_HOST, "WEB_HOST: ")
-    WEB_PORT = ask_value(args.WEB_PORT, "WEB_PORT: ", int)
-    TM_HOST = ask_value(args.TM_HOST, "TM_HOST: ")
-    TM_PORT = ask_value(args.TM_PORT, "TM_PORT: ", int)
+    WEB_HOST = host
+    WEB_PORT = port
+    TM_HOST = WEB_HOST
+    TM_PORT = port2
     print()
     packet = build_ccsds_packet(XSS)
     print(f"[*] Sending {len(packet)}-byte packet to {TM_HOST}:{TM_PORT}")

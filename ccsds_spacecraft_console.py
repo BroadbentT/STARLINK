@@ -31,6 +31,7 @@ import subprocess
 config = {
     "host": "0.0.0.0",
     "port": 0,
+    "port2":0,
     "spacecraft_id": 0,
     "virtual_channel_id": 0,
     "apid": 0,
@@ -488,22 +489,23 @@ def show_configuration():
     print()
     print(f"  [1] Target Host            : {config['host']}")
     print(f"  [2] Target Port            : {config['port']}")
+    print(f"  [3] Listening Port         : {config['port2']}")
     print()
-    print(f"  [3] Spacecraft ID          : {config['spacecraft_id']}")
-    print(f"  [4] Virtual Channel ID     : {config['virtual_channel_id']}")
+    print(f"  [4] Spacecraft ID          : {config['spacecraft_id']}")
+    print(f"  [5] Virtual Channel ID     : {config['virtual_channel_id']}")
+    print(f"  [6] APID                   : {config['apid']}")
     print()
-    print(f"  [5] APID                   : {config['apid']}")
-    print(f"  [6] Space Packet Count     : {config['packet_count']}")
-    print(f"  [7] TC Frame Sequence      : {config['tc_packet_count']}")
+    print(f"  [7] Space Packet Count     : {config['packet_count']}")
+    print(f"  [8] TC Frame Sequence      : {config['tc_packet_count']}")
     print()
-    print(f"  [8] Payload                : {payload_bytes()!r}")
-    print(f"  [8H] Payload HEX           : {payload_bytes().hex(' ')}")
+    print(f"  [9] Payload                : {payload_bytes()!r}")
+    print(f"  [9H] Payload HEX           : {payload_bytes().hex(' ')}")
     print()
 
 def edit_parameters():
     while True:
         show_configuration()
-        print("  [9] Return to Main Menu")
+        print("  [0] Return to Main Menu")
         print()
         choice = input("  Select parameter to edit: ").strip()
         if choice == "1":
@@ -511,18 +513,20 @@ def edit_parameters():
         elif choice == "2":
             config["port"] = get_int("Target TCP port", 1, 65535, config["port"])
         elif choice == "3":
-            config["spacecraft_id"] = get_int("Spacecraft ID", 0, 1023, config["spacecraft_id"])
+            config["port2"] = get_int("Listening TCP port", 1, 65535, config["port2"])
         elif choice == "4":
-            config["virtual_channel_id"] = get_int("Virtual Channel ID", 0, 63, config["virtual_channel_id"])
+            config["spacecraft_id"] = get_int("Spacecraft ID", 0, 1023, config["spacecraft_id"])
         elif choice == "5":
-            config["apid"] = get_int("APID", 0, 2047, config["apid"])
+            config["virtual_channel_id"] = get_int("Virtual Channel ID", 0, 63, config["virtual_channel_id"])
         elif choice == "6":
-            config["packet_count"] = get_int("Space Packet Sequence Count", 0, 16383, config["packet_count"])
+            config["apid"] = get_int("APID", 0, 2047, config["apid"])
         elif choice == "7":
-            config["tc_packet_count"] = get_int("TC Frame Sequence Number", 0, 255, config["tc_packet_count"])
+            config["packet_count"] = get_int("Space Packet Sequence Count", 0, 16383, config["packet_count"])
         elif choice == "8":
-            config["payload"] = get_payload()
+            config["tc_packet_count"] = get_int("TC Frame Sequence Number", 0, 255, config["tc_packet_count"])
         elif choice == "9":
+            config["payload"] = get_payload()
+        elif choice == "0":
             return
         else:
             print("\n  Invalid selection.")
@@ -539,6 +543,7 @@ def mparams():
     print()
     print(f"  Target Host          : {config['host']}")
     print(f"  Target Port          : {config['port']}")
+    print(f"  Listening Port       : {config['port2']}")
     print(f"  Spacecraft ID        : {config['spacecraft_id']}")
     print(f"  Virtual Channel ID   : {config['virtual_channel_id']}")
     print(f"  APID                 : {config['apid']}")
@@ -736,7 +741,10 @@ def breach():
     clear_screen()
     print_header("WARNING!! - BREACHING GROUNDSTATION")
     print("=" * 72)
-    subprocess.run([sys.executable, "groundStationBreach.py"], check=False)
+    config_to_send = config.copy()
+    if isinstance(config_to_send["payload"], bytes):
+        config_to_send["payload"] = config_to_send["payload"].decode("utf-8")
+    subprocess.run([sys.executable,"groundStationBreach.py",json.dumps(config_to_send),],check=True,)
     pause() 
 
 # ============================================================

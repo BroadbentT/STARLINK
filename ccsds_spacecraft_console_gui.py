@@ -15,17 +15,18 @@
 # -------------------------------------------------------------------------------------
 
 import tkinter as tk
-import socket
+import subprocess
 import threading
 import queue
-import subprocess
-import sys
+import socket
 import json
+import sys
+import os
 
 from pathlib import Path
 from datetime import datetime
-from tkinter import ttk, messagebox, filedialog, simpledialog
 from tkinter.scrolledtext import ScrolledText
+from tkinter import ttk, messagebox, filedialog, simpledialog
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -38,6 +39,7 @@ from tkinter.scrolledtext import ScrolledText
 DEFAULTS = {
     "host": "127.0.0.1",
     "port": 0,
+    "port2": 0,
     "spacecraft_id": 0,
     "virtual_channel_id": 0,
     "apid": 0,
@@ -54,7 +56,7 @@ DEFAULTS = {
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
-def generate_space_packet(apid: int, packet_count: int, payload: bytes) -> bytes:
+def generate_space_packet(apid: int, packet_count: int, payload: bytes):
     if not 0 <= apid <= 0x7FF:
         raise ValueError("APID must fit in 11 bits (0–2047).")
     if not 0 <= packet_count <= 0x3FFF:
@@ -66,11 +68,9 @@ def generate_space_packet(apid: int, packet_count: int, payload: bytes) -> bytes
     packet_data_length = len(payload) - 1
     if packet_data_length > 0xFFFF:
         raise ValueError("Payload is too large for CCSDS packet data length.")
-    return (packet_id.to_bytes(2, "big")
-            + sequence_control.to_bytes(2, "big")
-            + packet_data_length.to_bytes(2, "big") + payload)
+    return (packet_id.to_bytes(2, "big") + sequence_control.to_bytes(2, "big") + packet_data_length.to_bytes(2, "big") + payload)
 
-def ccsds_fecf(data: bytes) -> int:
+def ccsds_fecf(data: bytes):
     crc = 0xFFFF
     for byte in data:
         crc ^= byte << 8
@@ -81,7 +81,7 @@ def ccsds_fecf(data: bytes) -> int:
                 crc = (crc << 1) & 0xFFFF
     return crc
 
-def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_count: int, payload: bytes) -> bytes:
+def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_count: int, payload: bytes):
     if not 0 <= spacecraft_id <= 0x3FF:
         raise ValueError("Spacecraft ID must fit in 10 bits (0–1023).")
     if not 0 <= virtual_channel_id <= 0x3F:
@@ -94,12 +94,7 @@ def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_coun
     if total_length > 1024:
         raise ValueError("TC transfer frame cannot exceed 1024 octets.")
     frame_length = total_length - 1
-    header = bytes([
-        (spacecraft_id >> 8) & 0x03,
-        spacecraft_id & 0xFF,
-        (virtual_channel_id << 2) | ((frame_length >> 8) & 0x03),
-        frame_length & 0xFF,
-        tc_packet_count,])
+    header = bytes([(spacecraft_id >> 8) & 0x03,spacecraft_id & 0xFF,(virtual_channel_id << 2) | ((frame_length >> 8) & 0x03),frame_length & 0xFF,tc_packet_count,])
     without_fecf = header + payload
     return without_fecf + ccsds_fecf(without_fecf).to_bytes(2, "big")
 
@@ -137,10 +132,8 @@ class SpacecraftGUI(tk.Tk):
     def _build_ui(self):
         header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 10))
-        ttk.Label(header, text="CCSDS SPACECRAFT CONSOLE",
-                  font=("Segoe UI", 17, "bold")).pack(anchor="w")
-        ttk.Label(header, text="The Consultative Committee for Space Data Systems",
-                  font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 0))
+        ttk.Label(header, text="CCSDS SPACECRAFT CONSOLE",font=("Segoe UI", 17, "bold")).pack(anchor="w")
+        ttk.Label(header, text="The Consultative Committee for Space Data Systems",font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 0))
         warning = ttk.Label(self,text="LAB TARGETS ONLY: live operations may send commands or read target data; always verify host and port first.",foreground="#9a3412")
         warning.pack(anchor="w", pady=(0, 10))
         workspace = ttk.Panedwindow(self, orient="vertical")
@@ -153,19 +146,16 @@ class SpacecraftGUI(tk.Tk):
         main.add(right, weight=2)
         params = ttk.LabelFrame(left, text="Mission parameters", padding=10)
         params.pack(fill="x")
-        # Convenience endpoint input: enter HOST:PORT once, then split it into
-        # the two independent fields below. Host and port remain editable alone.
-        ttk.Label(params, text="Target endpoint (IP:PORT)").grid(
-            row=0, column=0, sticky="w", pady=4)
+        ttk.Label(params, text="Target endpoint (IP:PORT)").grid(row=0, column=0, sticky="w", pady=4)
         self.endpoint_var = tk.StringVar()
         endpoint_entry = ttk.Entry(params, textvariable=self.endpoint_var, width=22)
         endpoint_entry.grid(row=0, column=1, sticky="ew", padx=(8, 4), pady=4)
-        ttk.Button(params, text="Split", command=self.apply_endpoint).grid(
-            row=0, column=2, sticky="ew", padx=(0, 0), pady=4)
+        ttk.Button(params, text="Split", command=self.apply_endpoint).grid(row=0, column=2, sticky="ew", padx=(0, 0), pady=4)
         endpoint_entry.bind("<Return>", lambda _event: self.apply_endpoint())
         fields = [
             ("host", "Target IP / hostname"),
             ("port", "Target TCP port (1–65535)"),
+            ("port2", "Listening TCP port (1-65535)"),
             ("spacecraft_id", "Spacecraft ID (0–1023)"),
             ("virtual_channel_id", "Virtual channel ID (0–63)"),
             ("apid", "APID (0–2047)"),
@@ -175,8 +165,7 @@ class SpacecraftGUI(tk.Tk):
             ttk.Label(params, text=label).grid(row=row, column=0, sticky="w", pady=4)
             var = tk.StringVar()
             self.vars[key] = var
-            ttk.Entry(params, textvariable=var, width=22).grid(
-                row=row, column=1, columnspan=2, sticky="ew", padx=(8, 0), pady=4)
+            ttk.Entry(params, textvariable=var, width=22).grid(row=row, column=1, columnspan=2, sticky="ew", padx=(8, 0), pady=4)
         params.columnconfigure(1, weight=1)
         left_detail_panes = ttk.Panedwindow(left, orient="vertical")
         left_detail_panes.pack(fill="both", expand=True, pady=(10, 0))
@@ -187,14 +176,11 @@ class SpacecraftGUI(tk.Tk):
         self.payload_mode = tk.StringVar(value="text")
         mode_row = ttk.Frame(payload_frame)
         mode_row.pack(fill="x", pady=(0, 6))
-        ttk.Radiobutton(mode_row, text="Text / ASCII", variable=self.payload_mode,
-                        value="text").pack(side="left")
-        ttk.Radiobutton(mode_row, text="Hex bytes", variable=self.payload_mode,
-                        value="hex").pack(side="left", padx=(12, 0))
+        ttk.Radiobutton(mode_row, text="Text / ASCII", variable=self.payload_mode,value="text").pack(side="left")
+        ttk.Radiobutton(mode_row, text="Hex bytes", variable=self.payload_mode,value="hex").pack(side="left", padx=(12, 0))
         self.payload_text = ScrolledText(payload_frame, height=5, wrap="word")
         self.payload_text.pack(fill="both", expand=True)
-        ttk.Label(payload_frame, text="Hex mode accepts spaces, colons, or hyphens.",
-                  foreground="gray").pack(anchor="w", pady=(5, 0))
+        ttk.Label(payload_frame, text="Hex mode accepts spaces, colons, or hyphens.",foreground="gray").pack(anchor="w", pady=(5, 0))
         file_frame = ttk.LabelFrame(content_panes, text="File Management", padding=10)
         content_panes.add(file_frame, weight=1)
         self.selected_audio_path = tk.StringVar(value="")
@@ -253,15 +239,13 @@ class SpacecraftGUI(tk.Tk):
         self.terminal = ScrolledText(terminal_frame, height=5, wrap="word", font=("Consolas", 9), state="disabled")
         self.terminal.pack(fill="both", expand=True)
         self.status = tk.StringVar(value="Starting…")
-        ttk.Label(self, textvariable=self.status, relief="sunken",
-                  anchor="w", padding=(6, 4)).pack(fill="x", pady=(10, 0))
+        ttk.Label(self, textvariable=self.status, relief="sunken",anchor="w", padding=(6, 4)).pack(fill="x", pady=(10, 0))
 
     def browse_file_directory(self):
         directory = filedialog.askdirectory(
             title="Choose file-management directory",
             initialdir=self.file_directory.get() or str(Path(__file__).resolve().parent),
-            parent=self,
-        )
+            parent=self,)
         if directory:
             self.file_directory.set(directory)
             self.refresh_file_list()
@@ -274,8 +258,7 @@ class SpacecraftGUI(tk.Tk):
             self.log("WARNING", f"File-management directory does not exist: {directory}")
             return
         try:
-            files = sorted((item for item in directory.iterdir() if item.is_file()),
-                           key=lambda item: (item.suffix.lower() != ".wav", item.name.lower()))
+            files = sorted((item for item in directory.iterdir() if item.is_file()),key=lambda item: (item.suffix.lower() != ".wav", item.name.lower()))
         except OSError as exc:
             messagebox.showerror("File management", f"Cannot list directory:\n{exc}", parent=self)
             return
@@ -329,35 +312,55 @@ class SpacecraftGUI(tk.Tk):
         config_for_script["payload"] = payload.decode("utf-8", errors="replace") if isinstance(payload, bytes) else str(payload)
         self.status.set(f"Running {display_name}…")
         self.log("INFO", f"Starting {display_name} using {script_name}")
-        threading.Thread(
-            target=self._script_worker,
-            args=(str(script_path), json.dumps(config_for_script), display_name),
-            daemon=True,).start()
+        threading.Thread(target=self._script_worker,args=(str(script_path), json.dumps(config_for_script), display_name),daemon=True,).start()
+
 
     def _script_worker(self, script_path, config_json, display_name):
         try:
-            result = subprocess.run(
-                [sys.executable, script_path, config_json],
-                capture_output=True, text=True, timeout=300, check=False,
-                cwd=str(Path(script_path).resolve().parent),)
-            combined = (result.stdout or "")
-            if result.stderr:
-                combined += "\n[stderr]\n" + result.stderr
-            if not combined.strip():
-                combined = "(The script produced no console output.)"
-            title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
-            self.after(0, lambda: self._write(title + "\n" + "=" * 106 + "\n\n" + combined))
-            self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
-            self.log("INFO" if result.returncode == 0 else "ERROR", f"{display_name} finished with exit code {result.returncode}")
-        except subprocess.TimeoutExpired:
-            self.after(0, lambda: self._write(f"{display_name.upper()}\n\nStopped waiting after 5 minutes; check the helper script."))
-            self.after(0, lambda: self.status.set(f"{display_name}: timed out"))
-            self.log("ERROR", f"{display_name} timed out after 300 seconds")
+            env = os.environ.copy()
+            env["PYTHONUNBUFFERED"] = "1"
+            self.after(0, self._begin_live_output, display_name)
+            process = subprocess.Popen(
+                [sys.executable, "-u", script_path, config_json],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+                cwd=str(Path(script_path).resolve().parent),
+                env=env,)
+            if process.stdout is not None:
+                for line in iter(process.stdout.readline, ""):
+                    self.after(0, self._append_live_output, line)
+                process.stdout.close()
+            return_code = process.wait()
+            title = (f"{display_name.upper()} — " f"{'COMPLETED' if return_code == 0 else 'EXIT CODE ' + str(return_code)}")
+            self.after(0,self._finish_live_output,title,f"{display_name}: exit code {return_code}",)
+            self.log("INFO" if return_code == 0 else "ERROR",f"{display_name} finished with exit code {return_code}",)
         except OSError as exc:
             message = str(exc)
-            self.after(0, lambda: self._write(f"Could not start {display_name}: {message}"))
-            self.after(0, lambda: self.status.set(f"{display_name}: failed to start"))
+            self.after(0,self._append_live_output,f"Could not start {display_name}: {message}\n",)
+            self.after(0, self.status.set, f"{display_name}: failed to start")
             self.log("ERROR", f"Could not start {display_name}: {message}")
+
+    def _begin_live_output(self, display_name):
+        self.output.configure(state="normal")
+        self.output.delete("1.0", "end")
+        self.output.insert("end",f"{display_name.upper()} — RUNNING\n" + "=" * 106 + "\n\n",)
+        self.output.see("end")
+        self.output.configure(state="disabled")
+        self.status.set(f"Running {display_name}…")
+
+    def _append_live_output(self, text):
+        self.output.configure(state="normal")
+        self.output.insert("end", text)
+        self.output.see("end")
+        self.output.configure(state="disabled")
+
+    def _finish_live_output(self, title, status_text):
+        self._append_live_output("\n" + "=" * 106 + "\n" + title + "\n")
+        self.status.set(status_text)
 
     def _confirm_telecommand(self, command_type):
         script = "tmTelecommand.py" if command_type == "TM" else "adTelecommand.py"
@@ -386,9 +389,7 @@ class SpacecraftGUI(tk.Tk):
         """Run signalFromSpace.py using the file assigned in File Management."""
         raw_path = self.selected_audio_path.get().strip()
         if not raw_path:
-            messagebox.showwarning("No input file selected",
-                                   "Select a WAV file in File Management before running the AFSK demodulator.",
-                                   parent=self)
+            messagebox.showwarning("No input file selected","Select a WAV file in File Management before running the AFSK demodulator.",parent=self)
             return
         audio_path = Path(raw_path).expanduser().resolve()
         if not audio_path.is_file():
@@ -403,16 +404,11 @@ class SpacecraftGUI(tk.Tk):
             return
         self.status.set(f"Running AFSK demodulator on {audio_path.name}…")
         self.log("INFO", f"Starting signalFromSpace.py with selected_audio_path={audio_path}")
-        threading.Thread(target=self._audio_script_worker,
-                         args=(str(script_path), str(audio_path), "AFSK 1200 Demodulator"),
-                         daemon=True).start()
+        threading.Thread(target=self._audio_script_worker,args=(str(script_path), str(audio_path), "AFSK 1200 Demodulator"),daemon=True).start()
 
     def _audio_script_worker(self, script_path, audio_path, display_name):
         try:
-            result = subprocess.run(
-                [sys.executable, script_path, audio_path],
-                capture_output=True, text=True, timeout=300, check=False,
-                cwd=str(Path(script_path).resolve().parent),)
+            result = subprocess.run([sys.executable, script_path, audio_path],capture_output=True, text=True, timeout=300, check=False,cwd=str(Path(script_path).resolve().parent),)
             combined = result.stdout or ""
             if result.stderr:
                 combined += "\n[stderr]\n" + result.stderr
@@ -434,9 +430,15 @@ class SpacecraftGUI(tk.Tk):
             self.log("ERROR", f"Could not start {display_name}: {message}")
 
     def run_eeprom_inspection(self):
-        if not messagebox.askyesno("Confirm EEPROM dump","This launches scalpedPlatform.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
-            self.log("INFO", "EEPROM dump cancelled by user")
-            return
+        if not messagebox.askyesno(
+                f"Confirm EEPROM Dump Command",
+                f"This will launch scalpedPlatform.py, which will transmit a EEPROM dump command to the configured endpoint.\n\n"
+                f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"
+                "Continue only if you are authorised and have verified the target and payload.",
+                parent=self,
+             ):
+                self.log("INFO", f"{command_type} telecommand launch cancelled")
+                return
         self._run_config_script("scalpedPlatform.py", "EEPROM Dump")
 
     def run_pass_prediction(self):
@@ -452,55 +454,18 @@ class SpacecraftGUI(tk.Tk):
         self._run_config_script("antennaPointing.py", "Automated Tracking System")
 
     def run_groundstation_security_check(self):
-        """Perform a safe local configuration/dependency audit; no intrusion attempts."""
-        base = Path(__file__).resolve().parent
-        expected_scripts = [
-            "tmTelecommand.py", "adTelecommand.py", "firstContact.py",
-            "antennaPointing.py", "signalFromSpace.py",]
-        try:
-            cfg = self._get_config()
-            config_lines = [
-                f"Target configured: {'yes' if cfg['host'] else 'no'}",
-                f"TCP port configured: {'yes' if 1 <= cfg['port'] <= 65535 else 'no (set a valid port)'}",
-                f"Spacecraft ID: {cfg['spacecraft_id']}",
-                f"Virtual channel ID: {cfg['virtual_channel_id']}",
-                f"APID: {cfg['apid']}",
-                f"Payload length: {len(cfg['payload'])} bytes",]
-        except ValueError as exc:
-            config_lines = [f"Configuration validation: FAILED — {exc}"]
-        script_lines = [f"{'FOUND' if (base / name).is_file() else 'MISSING'}  {name}" for name in expected_scripts]
-        report = (
-            "GROUNDSTATION SECURITY CHECK — SAFE LOCAL AUDIT\n" + "=" * 106 + "\n\n"
-            + "No exploit, login attempt, or command was sent. This checks only local settings and helper files.\n\n"
-            + "MISSION CONFIGURATION\n" + "-" * 24 + "\n"
-            + "\n".join(config_lines) + "\n\n"
-            + "LOCAL HELPER SCRIPTS\n" + "-" * 24 + "\n"
-            + "\n".join(script_lines) + "\n\n"
-            + "For a live TCP reachability check, use option 03."
-        )
-        missing = sum(1 for name in expected_scripts if not (base / name).is_file())
-        self._write(report, "WARNING" if missing else "INFO")
-        self.status.set(f"Safe security check complete; {missing} helper script(s) missing")
-
-    def _not_wired(self, title, reason):
-        self._write(
-            title.upper() + "\n" + "=" * 106 + "\n\n"
-            + reason + "\n\n"
-            + "This option is displayed to match the original console menu, but it is not active in this GUI."
-        )
-        self.status.set(f"{title}: not available in GUI")
-        self.log("WARNING", f"{title} selected but not executed: {reason}")
+        if not messagebox.askyesno("Confirm automated hacking","This launches groundStationBreach.py, which will attempt to hack ground station systems.\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
+            self.log("INFO", "Automated hacking cancelled by user")
+            return
+        self._run_config_script("groundStationBreach.py", "Automated Hacking System")
 
     def apply_endpoint(self):
         raw = self.endpoint_var.get().strip()
         if not raw:
             return
-        # rsplit also handles bracketed IPv6 endpoints such as [::1]:33366.
         host, separator, port_text = raw.rpartition(":")
         if not separator or not host.strip() or not port_text.strip():
-            messagebox.showerror(
-                "Invalid endpoint", "Enter the endpoint as HOST:PORT, for example 154.57.164.68:33366.",
-                parent=self,)
+            messagebox.showerror("Invalid endpoint", "Enter the endpoint as HOST:PORT, for example 154.57.164.68:33366.",parent=self,)
             return
         host = host.strip()
         if host.startswith("[") and host.endswith("]"):
@@ -610,6 +575,7 @@ class SpacecraftGUI(tk.Tk):
         result = {}
         ranges = {
             "port": (0, 65535),
+            "port2": (0, 65535),
             "spacecraft_id": (0, 1023),
             "virtual_channel_id": (0, 63),
             "apid": (0, 2047),
@@ -641,27 +607,6 @@ class SpacecraftGUI(tk.Tk):
             raise ValueError("Payload cannot be empty.")
         result["payload"] = payload
         return result
-
-    def validate(self):
-        try:
-            cfg = self._get_config()
-            packet, frame = self._build(cfg)
-            self._write(
-                "Configuration valid.\n\n"
-                f"Destination: {cfg['host']}:{cfg['port']}\n"
-                f"Spacecraft ID: {cfg['spacecraft_id']}\n"
-                f"Virtual channel: {cfg['virtual_channel_id']}\n"
-                f"APID: {cfg['apid']}\n"
-                f"Space packet count: {cfg['packet_count']}\n"
-                f"TC frame sequence: {cfg['tc_packet_count']}\n"
-                f"Payload length: {len(cfg['payload'])} bytes\n"
-                f"Payload hex: {cfg['payload'].hex(' ')}\n"
-                f"Space packet length: {len(packet)} bytes\n"
-                f"Transfer frame length: {len(frame)} bytes")
-            self.status.set("Configuration validated")
-        except ValueError as exc:
-            messagebox.showerror("Validation error", str(exc))
-            self.status.set("Validation failed")
 
     @staticmethod
     def _build(cfg):

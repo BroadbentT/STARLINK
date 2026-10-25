@@ -31,9 +31,10 @@ import sys
 if len(sys.argv) == 2 and sys.argv[1].lstrip().startswith("{"):
     config = json.loads(sys.argv[1])
 else:
-    parser = argparse.ArgumentParser(description="Spacecraft packet sender")
+    parser = argparse.ArgumentParser(description="Spacecraft tracking system")
     parser.add_argument("--host", required=True)
     parser.add_argument("--port", type=int, required=True)
+    parser.add_argument("--listening port", type=int, required=True)
     parser.add_argument("--spacecraft-id", type=int, required=True)
     parser.add_argument("--virtual-channel-id", type=int, required=True)
     parser.add_argument("--apid", type=int, required=True)
@@ -44,6 +45,7 @@ else:
     config = {
         "host": args.host,
         "port": args.port,
+        "port2": args.port2,
         "spacecraft_id": args.spacecraft_id,
         "virtual_channel_id": args.virtual_channel_id,
         "apid": args.apid,
@@ -54,6 +56,7 @@ else:
 
 host = config["host"]
 port = int(config["port"])
+port2 = int(config["port2"])
 spacecraft_id = int(config["spacecraft_id"])
 virtual_channel_id = int(config["virtual_channel_id"])
 apid = int(config["apid"])
