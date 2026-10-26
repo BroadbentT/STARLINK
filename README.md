@@ -3,7 +3,7 @@
 **BETA RELEASE | Satellite Cybersecurity Research Toolkit**
 
 <p align="center">
-  <img src="https://github.com/BroadbentT/STARLINK/blob/main/Starlink%202026%20Mission%20Control.png" alt="STARLINK Command Centre">
+  <img src="https://github.com/BroadbentT/STARLINK/blob/main/Neon%20Satellite%20Exploitation%20Command%20Center.png" alt="STARLINK Command Centre">
 </p>
 
 ## COMMAND CENTRE FOR REMOTE SATELLITE ANALYSIS
