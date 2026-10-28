@@ -72,7 +72,7 @@ tc_packet_count = int(config["tc_packet_count"])
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
-def crc16_ccitt_false(data: bytes) -> int:
+def crc16_ccitt_false(data: bytes):
     crc = 0xFFFF
     for byte in data:
         crc ^= byte << 8
@@ -83,7 +83,7 @@ def crc16_ccitt_false(data: bytes) -> int:
                 crc = (crc << 1) & 0xFFFF
     return crc
 
-def generate_space_packet(apid: int, packet_count: int, payload: bytes) -> bytes:
+def generate_space_packet(apid: int, packet_count: int, payload: bytes):
     version = 0
     packet_type = 1
     secondary_header_flag = 0
@@ -93,7 +93,7 @@ def generate_space_packet(apid: int, packet_count: int, payload: bytes) -> bytes
     packet_data_length = len(payload) - 1
     return struct.pack(">HHH", packet_id, sequence_control, packet_data_length) + payload
 
-def generate_tc_frame(spacecraft_id: int,virtual_channel_id: int,tc_packet_count: int,payload: bytes,) -> bytes:
+def generate_tc_frame(spacecraft_id: int,virtual_channel_id: int,tc_packet_count: int,payload: bytes,):
     version = 0
     bypass_flag = 1
     control_command_flag = 0
@@ -111,7 +111,9 @@ def tmTeleCommand():
     frame = generate_tc_frame(spacecraft_id=spacecraft_id,virtual_channel_id=virtual_channel_id,tc_packet_count=0,payload=space_packet,)
     log.info(f"Space Packet length: {len(space_packet)} bytes")
     log.info(f"TC frame length: {len(frame)} bytes")
-    log.info(hexdump(frame))
+    hex_part = " ".join(f"{b:02x}" for b in frame)
+    ascii_part = "".join(chr(b) if 32 <= b <= 126 else f"\\x{b:02x}" for b in frame)
+    log.info(f"HEX:{hex_part}\nASCII:{ascii_part}")
     r = remote(host,port)
     r.send(frame)
     response = r.recvall(timeout=3)

@@ -48,6 +48,8 @@ DEFAULTS = {
     "payload": b"PAYLOAD",
 }
 
+separator = "=" * 100
+
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
@@ -98,13 +100,16 @@ def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_coun
     without_fecf = header + payload
     return without_fecf + ccsds_fecf(without_fecf).to_bytes(2, "big")
 
-def hex_dump(data, width=16):
+def hex_dump(data, width=32):
+    if width <= 0:
+        raise ValueError("width must be greater than 0")
     lines = []
     for offset in range(0, len(data), width):
         chunk = data[offset:offset + width]
         hex_part = " ".join(f"{b:02x}" for b in chunk)
-        ascii_part = "".join(chr(b) if 32 <= b <= 126 else f"\\x{b:02x}" for b in chunk) 
-        lines.append(f"{offset:04x} {hex_part:<{width * 3 - 1}} |{ascii_part}|")
+        ascii_part = "".join(chr(b) if 32 <= b <= 126 else f"\\x{b:02x}" for b in chunk)
+        lines.append(f"HEX:   {hex_part}")
+        lines.append(f"ASCII: {ascii_part}")
     return "\n".join(lines)
 
 # ------------------------------------------------------------------------------------- 
@@ -132,9 +137,10 @@ class SpacecraftGUI(tk.Tk):
     def _build_ui(self):
         header = ttk.Frame(self)
         header.pack(fill="x", pady=(0, 10))
-        ttk.Label(header, text="CCSDS SPACECRAFT CONSOLE",font=("Segoe UI", 17, "bold")).pack(anchor="w")
-        ttk.Label(header, text="The Consultative Committee for Space Data Systems",font=("Segoe UI", 10)).pack(anchor="w", pady=(2, 0))
+        ttk.Label(header, text="CCSDS SPACECRAFT CONSOLE",font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        ttk.Label(header, text="The Consultative Committee for Space Data Systems",font=("Segoe UI", 12)).pack(anchor="w", pady=(2, 0))
         warning = ttk.Label(self,text="LAB TARGETS ONLY: live operations may send commands or read target data; always verify host and port first.",foreground="#9a3412")
+
         warning.pack(anchor="w", pady=(0, 10))
         workspace = ttk.Panedwindow(self, orient="vertical")
         workspace.pack(fill="both", expand=True)
@@ -144,6 +150,7 @@ class SpacecraftGUI(tk.Tk):
         right = ttk.Frame(main)
         main.add(left, weight=1)
         main.add(right, weight=2)
+
         params = ttk.LabelFrame(left, text="Mission parameters", padding=10)
         params.pack(fill="x")
         ttk.Label(params, text="Target endpoint (IP:PORT)").grid(row=0, column=0, sticky="w", pady=4)
@@ -152,6 +159,7 @@ class SpacecraftGUI(tk.Tk):
         endpoint_entry.grid(row=0, column=1, sticky="ew", padx=(8, 4), pady=4)
         ttk.Button(params, text="Split", command=self.apply_endpoint).grid(row=0, column=2, sticky="ew", padx=(0, 0), pady=4)
         endpoint_entry.bind("<Return>", lambda _event: self.apply_endpoint())
+
         fields = [
             ("host", "Target IP / hostname"),
             ("port", "Target TCP port (1–65535)"),
@@ -161,11 +169,13 @@ class SpacecraftGUI(tk.Tk):
             ("apid", "APID (0–2047)"),
             ("packet_count", "Space packet sequence (0–16383)"),
             ("tc_packet_count", "TC frame sequence (0–255)"),]
+
         for row, (key, label) in enumerate(fields, start=1):
             ttk.Label(params, text=label).grid(row=row, column=0, sticky="w", pady=4)
             var = tk.StringVar()
             self.vars[key] = var
             ttk.Entry(params, textvariable=var, width=22).grid(row=row, column=1, columnspan=2, sticky="ew", padx=(8, 0), pady=4)
+
         params.columnconfigure(1, weight=1)
         left_detail_panes = ttk.Panedwindow(left, orient="vertical")
         left_detail_panes.pack(fill="both", expand=True, pady=(10, 0))
@@ -176,11 +186,13 @@ class SpacecraftGUI(tk.Tk):
         self.payload_mode = tk.StringVar(value="text")
         mode_row = ttk.Frame(payload_frame)
         mode_row.pack(fill="x", pady=(0, 6))
+
         ttk.Radiobutton(mode_row, text="Text / ASCII", variable=self.payload_mode,value="text").pack(side="left")
         ttk.Radiobutton(mode_row, text="Hex bytes", variable=self.payload_mode,value="hex").pack(side="left", padx=(12, 0))
         self.payload_text = ScrolledText(payload_frame, height=5, wrap="word")
         self.payload_text.pack(fill="both", expand=True)
         ttk.Label(payload_frame, text="Hex mode accepts spaces, colons, or hyphens.",foreground="gray").pack(anchor="w", pady=(5, 0))
+        
         file_frame = ttk.LabelFrame(content_panes, text="File Management", padding=10)
         content_panes.add(file_frame, weight=1)
         self.selected_audio_path = tk.StringVar(value="")
@@ -197,26 +209,29 @@ class SpacecraftGUI(tk.Tk):
         file_buttons = ttk.Frame(file_frame)
         file_buttons.pack(fill="x")
         ttk.Button(file_buttons, text="Refresh", command=self.refresh_file_list).pack(side="left")
-        ttk.Button(file_buttons, text="Select WAV…", command=self.browse_audio_file).pack(side="left", padx=(5, 0))
+        ttk.Button(file_buttons, text="Select", command=self.browse_audio_file).pack(side="left", padx=(5, 0))
         ttk.Button(file_buttons, text="Clear", command=self.clear_selected_file).pack(side="left", padx=(5, 0))
         ttk.Label(file_frame, text="Assigned variable: selected_audio_path").pack(anchor="w", pady=(7, 0))
         ttk.Entry(file_frame, textvariable=self.selected_audio_path, state="readonly").pack(fill="x", pady=(2, 0))
         self.refresh_file_list()
+
         right_workspace = ttk.Panedwindow(right, orient="vertical")
         right_workspace.pack(fill="both", expand=True)
         operations_frame = ttk.LabelFrame(right_workspace, text="Operations — full menu", padding=8)
         right_workspace.add(operations_frame, weight=2)
+
         operation_specs = [
             ("Preview CCSDS Frame", self.preview, True),
             ("Check Connection to Spacecraft", self.test_connection, True),
             ("Transmit TM Type Telecommand", self.run_tm_telecommand, True),
             ("Transmit AD Type Telecommand", self.run_ad_telecommand, True),
-            ("Dump Spacecraft EEPROM data", self.run_eeprom_inspection, True),
+            ("Dump Spacecraft EEPROM Data", self.run_eeprom_inspection, True),
             ("Pass Prediction System", self.run_pass_prediction, True),
             ("Automated Tracking System", self.run_automated_tracking, True),
-            ("Demodulate AFSK 1200 signals", self.run_afsk_demodulator, True),
+            ("Demodulate AFSK 1200 Signals", self.run_afsk_demodulator, True),
             ("Groundstation Security Check", self.run_groundstation_security_check, True),
             ("Exit", self.destroy, True),]
+
         for index, (label, command, enabled) in enumerate(operation_specs):
             button = ttk.Button(operations_frame, text=label, command=command)
             button.grid(row=index // 2, column=index % 2, sticky="ew", padx=4, pady=3)
@@ -224,18 +239,20 @@ class SpacecraftGUI(tk.Tk):
                 button.configure(state="disabled")
         operations_frame.columnconfigure(0, weight=1)
         operations_frame.columnconfigure(1, weight=1)
+
         output_frame = ttk.LabelFrame(right_workspace, text="Output", padding=8)
         right_workspace.add(output_frame, weight=2)
         self.output = ScrolledText(output_frame, height=10, wrap="none", font=("Consolas", 9),undo=False)
         self.output.pack(fill="both", expand=True)
         self.output.configure(state="disabled")
+
         terminal_frame = ttk.LabelFrame(left_detail_panes, text="Terminal / diagnostic log", padding=6)
         left_detail_panes.add(terminal_frame, weight=1)
         terminal_toolbar = ttk.Frame(terminal_frame)
         terminal_toolbar.pack(fill="x", pady=(0, 5))
         ttk.Button(terminal_toolbar, text="Clear", command=self.clear_log).pack(side="left")
         ttk.Button(terminal_toolbar, text="Copy", command=self.copy_log).pack(side="left", padx=(5, 0))
-        ttk.Button(terminal_toolbar, text="Save log…", command=self.save_log).pack(side="left", padx=(5, 0))
+        ttk.Button(terminal_toolbar, text="Save", command=self.save_log).pack(side="left", padx=(5, 0))
         self.terminal = ScrolledText(terminal_frame, height=5, wrap="word", font=("Consolas", 9), state="disabled")
         self.terminal.pack(fill="both", expand=True)
         self.status = tk.StringVar(value="Starting…")
@@ -264,7 +281,7 @@ class SpacecraftGUI(tk.Tk):
             return
         self._listed_files = files
         for item in files:
-            suffix = "  [WAV]" if item.suffix.lower() == ".wav" else ""
+            suffix = "  *" if item.suffix.lower() == ".wav" else ""
             self.file_list.insert("end", item.name + suffix)
         self.log("INFO", f"File list refreshed: {directory} ({len(files)} files)")
 
@@ -300,7 +317,7 @@ class SpacecraftGUI(tk.Tk):
     def _run_config_script(self, script_name, display_name):
         script_path = Path(__file__).resolve().parent / script_name
         if not script_path.is_file():
-            self._not_wired(display_name, f"Required script was not found next to this GUI:\n{script_path}")
+            self.log(display_name, f"Required script was not found next to this GUI:{script_path}")
             return
         try:
             cfg = self._get_config()
@@ -347,7 +364,7 @@ class SpacecraftGUI(tk.Tk):
     def _begin_live_output(self, display_name):
         self.output.configure(state="normal")
         self.output.delete("1.0", "end")
-        self.output.insert("end",f"{display_name.upper()} — RUNNING\n" + "=" * 106 + "\n\n",)
+        self.output.insert("end",f"{display_name.upper()} — RUNNING\n" + separator + "\n\n",)
         self.output.see("end")
         self.output.configure(state="disabled")
         self.status.set(f"Running {display_name}…")
@@ -359,14 +376,14 @@ class SpacecraftGUI(tk.Tk):
         self.output.configure(state="disabled")
 
     def _finish_live_output(self, title, status_text):
-        self._append_live_output("\n" + "=" * 106 + "\n" + title + "\n")
+        self._append_live_output("\n" + separator + "\n" + title + "\n")
         self.status.set(status_text)
 
     def _confirm_telecommand(self, command_type):
         script = "tmTelecommand.py" if command_type == "TM" else "adTelecommand.py"
         script_path = Path(__file__).resolve().parent / script
         if not script_path.is_file():
-            self._not_wired(f"{command_type} Telecommand", f"Required script not found:\n{script_path}")
+            self.log(f"{command_type} Telecommand", f"Required script not found:{script_path}")
             return
         if not messagebox.askyesno(
             f"Confirm {command_type} telecommand",
@@ -400,7 +417,7 @@ class SpacecraftGUI(tk.Tk):
             return
         script_path = Path(__file__).resolve().parent / "signalFromSpace.py"
         if not script_path.is_file():
-            self._not_wired("AFSK 1200 Demodulator", f"Required script was not found next to this GUI:\n{script_path}")
+            self.log("AFSK 1200 Demodulator", f"Required script was not found next to this GUI:{script_path}")
             return
         self.status.set(f"Running AFSK demodulator on {audio_path.name}…")
         self.log("INFO", f"Starting signalFromSpace.py with selected_audio_path={audio_path}")
@@ -415,7 +432,7 @@ class SpacecraftGUI(tk.Tk):
             if not combined.strip():
                 combined = "(The script produced no console output.)"
             title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
-            self.after(0, lambda: self._write(title + "\n" + "=" * 106 + "\n\n" + combined))
+            self.after(0, lambda: self._write(title + "\n" + separator + "\n\n" + combined))
             self.after(0, lambda: self.status.set(f"{display_name}: exit code {result.returncode}"))
             self.log("INFO" if result.returncode == 0 else "ERROR",
                      f"{display_name} finished with exit code {result.returncode}")
@@ -620,7 +637,6 @@ class SpacecraftGUI(tk.Tk):
             packet, frame = self._build(cfg)
             fecf_ok = (len(frame) >= 2 and ccsds_fecf(frame[:-2]) == int.from_bytes(frame[-2:], "big"))
             packet_length_field = (int.from_bytes(packet[4:6], "big") if len(packet) >= 6 else None)
-            separator = "_" * 106
             output = (
                 "CCSDS PACKET PREVIEW (offline)\n"
                 + separator + "\n\n"
