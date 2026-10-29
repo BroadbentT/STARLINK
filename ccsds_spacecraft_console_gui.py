@@ -26,7 +26,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 from tkinter.scrolledtext import ScrolledText
-from tkinter import ttk, messagebox, filedialog, simpledialog
+from tkinter import ttk, messagebox, filedialog
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -99,18 +99,6 @@ def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_coun
     header = bytes([(spacecraft_id >> 8) & 0x03,spacecraft_id & 0xFF,(virtual_channel_id << 2) | ((frame_length >> 8) & 0x03),frame_length & 0xFF,tc_packet_count,])
     without_fecf = header + payload
     return without_fecf + ccsds_fecf(without_fecf).to_bytes(2, "big")
-
-def hex_dump(data, width=32):
-    if width <= 0:
-        raise ValueError("width must be greater than 0")
-    lines = []
-    for offset in range(0, len(data), width):
-        chunk = data[offset:offset + width]
-        hex_part = " ".join(f"{b:02x}" for b in chunk)
-        ascii_part = "".join(chr(b) if 32 <= b <= 126 else f"\\x{b:02x}" for b in chunk)
-        lines.append(f"HEX:   {hex_part}")
-        lines.append(f"ASCII: {ascii_part}")
-    return "\n".join(lines)
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -221,7 +209,8 @@ class SpacecraftGUI(tk.Tk):
         right_workspace.add(operations_frame, weight=2)
 
         operation_specs = [
-            ("Preview CCSDS Frame", self.preview, True),
+#            ("Preview CCSDS Frame", self.preview, True),
+            ("Preview CCSDS Frame",self.run_preview, True),
             ("Check Connection to Spacecraft", self.test_connection, True),
             ("Transmit TM Type Telecommand", self.run_tm_telecommand, True),
             ("Transmit AD Type Telecommand", self.run_ad_telecommand, True),
@@ -401,6 +390,9 @@ class SpacecraftGUI(tk.Tk):
 
     def run_ad_telecommand(self):
         self._confirm_telecommand("AD")
+
+    def run_preview(self):
+        self._run_config_script("viewPacket.py", "Preview Space Packet")
 
     def run_afsk_demodulator(self):
         """Run signalFromSpace.py using the file assigned in File Management."""
@@ -630,48 +622,6 @@ class SpacecraftGUI(tk.Tk):
         packet = generate_space_packet(cfg["apid"], cfg["packet_count"], cfg["payload"])
         frame = generate_tc_frame(cfg["spacecraft_id"], cfg["virtual_channel_id"],cfg["tc_packet_count"], packet)
         return packet, frame
-
-    def preview(self):
-        try:
-            cfg = self._get_config()
-            packet, frame = self._build(cfg)
-            fecf_ok = (len(frame) >= 2 and ccsds_fecf(frame[:-2]) == int.from_bytes(frame[-2:], "big"))
-            packet_length_field = (int.from_bytes(packet[4:6], "big") if len(packet) >= 6 else None)
-            output = (
-                "CCSDS PACKET PREVIEW (offline)\n"
-                + separator + "\n\n"
-                + "SPACE PACKET\n"
-                + separator + "\n"
-                + f"Length: {len(packet)} bytes\n"
-                + f"HEX: {packet.hex(' ')}\n"
-                + "ASCII: "
-                + "".join(chr(b) if 32 <= b <= 126 else "░" for b in packet) + "\n\n"
-                + "TC TRANSFER FRAME\n"
-                + separator + "\n"
-                + f"Length: {len(frame)} bytes\n"
-                + f"HEX: {frame.hex(' ')}\n"
-                + "ASCII: "
-                + "".join(chr(b) if 32 <= b <= 126 else "░" for b in frame) + "\n\n"
-                + "FRAME CHECKS\n"
-                + separator + "\n"
-                + (f"Space packet length field: {packet_length_field}\n"
-                    f"Space packet expected length: {packet_length_field + 7}\n"
-                    if packet_length_field is not None
-                    else "Space packet length field: unavailable\n")
-                + (f"Transfer frame FECF: {frame[-2:].hex(' ')}\n"
-                    if len(frame) >= 2
-                    else "Transfer frame FECF: unavailable\n")
-                + f"FECF validation: {'VALID' if fecf_ok else 'INVALID'}\n\n"
-                + "FULL HEX DUMP\n"
-                + separator + "\n"
-                + hex_dump(frame) + "\n\n"
-                + "No bytes were transmitted.\n"
-                + separator + "\n")
-            self._write(output)
-            self.status.set("Packet preview generated locally")
-        except ValueError as exc:
-            messagebox.showerror("Packet error", str(exc))
-            self.status.set("Preview failed")
 
 if __name__ == "__main__":
     app = SpacecraftGUI()

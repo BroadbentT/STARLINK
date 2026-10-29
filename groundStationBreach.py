@@ -52,7 +52,7 @@ else:
     parser = argparse.ArgumentParser(description="Spacecraft tracking system")
     parser.add_argument("--host", required=True)
     parser.add_argument("--port", type=int, required=True)
-    parser.add_argument("--listening port", type=int, required=True)
+    parser.add_argument("--port2", type=int, required=True)
     parser.add_argument("--spacecraft-id", type=int, required=True)
     parser.add_argument("--virtual-channel-id", type=int, required=True)
     parser.add_argument("--apid", type=int, required=True)
@@ -73,14 +73,14 @@ else:
     }
 
 host = config["host"]
-port = int(config["port"])
-port2 = int(config["port2"])
-spacecraft_id = int(config["spacecraft_id"])
+port = (config["port"])
+port2 = (config["port2"])
+spacecraft_id = (config["spacecraft_id"])
 virtual_channel_id = int(config["virtual_channel_id"])
-apid = int(config["apid"])
+apid = (config["apid"])
 user_payload = config["payload"].encode("utf-8")
-packet_count = int(config["packet_count"])
-tc_packet_count = int(config["tc_packet_count"])
+packet_count = (config["packet_count"])
+tc_packet_count = (config["tc_packet_count"])
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
