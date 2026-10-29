@@ -34,13 +34,13 @@ else:
     parser = argparse.ArgumentParser(description="Spacecraft tracking system")
     parser.add_argument("--host", required=True)
     parser.add_argument("--port", type=int, required=True)
-    parser.add_argument("--port2", type=int, required=True)
+    parser.add_argument("--port2", type=int, required=False)
     parser.add_argument("--spacecraft-id", type=int, required=True)
     parser.add_argument("--virtual-channel-id", type=int, required=True)
     parser.add_argument("--apid", type=int, required=True)
     parser.add_argument("--payload", required=True)
-    parser.add_argument("--packet-count", type=int, required=True)
-    parser.add_argument("--tc-packet-count", type=int, required=True)
+    parser.add_argument("--packet-count", type=int, required=False)
+    parser.add_argument("--tc-packet-count", type=int, required=False)
     args = parser.parse_args()
     config = {
         "host": args.host,
