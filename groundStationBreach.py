@@ -72,13 +72,13 @@ else:
         "tc_packet_count": args.tc_packet_count,
     }
 
-host = config["host"]
+host = (config["host"])
 port = (config["port"])
 port2 = (config["port2"])
 spacecraft_id = (config["spacecraft_id"])
 virtual_channel_id = (config["virtual_channel_id"])
 apid = (config["apid"])
-# user_payload = config["payload"].encode("utf-8")
+payload = (config["payload"]) # .encode("utf-8"))
 packet_count = (config["packet_count"])
 tc_packet_count = (config["tc_packet_count"])
 
@@ -127,8 +127,16 @@ def restore_terminal_echo():
             settings[3] |= termios.ECHO
             termios.tcsetattr(sys.stdin.fileno(),termios.TCSANOW,settings)
 
-def main():
-    restore_terminal_echo()
+def print_header(title):
+    print("╔" + "═" * 98 + "╗")
+    print(f"║ {title:^96} ║")
+    print("╚" + "═" * 98 + "╝\n")
+
+def breach():
+    print_header("BREACH GROUND STATION")
+    print("[!] Using breach code:")
+    print("\n\t" + str(XSS))
+#    restore_terminal_echo()
     print()
     WEB_HOST = host
     WEB_PORT = port
@@ -172,4 +180,4 @@ def main():
         print("[-] No HTB flag found")
 
 if __name__ == "__main__":
-    main()
+    breach()

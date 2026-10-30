@@ -59,13 +59,13 @@ else:
         "tc_packet_count": args.tc_packet_count,
     }
 
-host = config["host"]
+host = (config["host"])
 port = (config["port"])
 port2 = (config["port2"])
 spacecraft_id = (config["spacecraft_id"])
 virtual_channel_id = (config["virtual_channel_id"])
 apid = (config["apid"])
-# user_payload = config["payload"].encode("utf-8")
+# user_payload = (config["payload"].encode("utf-8"))
 packet_count = (config["packet_count"])
 tc_packet_count = (config["tc_packet_count"])
 
@@ -308,7 +308,13 @@ def recv_until_quiet(sock, timeout=1.0):
             break
     return b"".join(chunks).decode(errors="replace")
 
+def print_header(title):
+    print("╔" + "═" * 98 + "╗")
+    print(f"║ {title:^96} ║")
+    print("╚" + "═" * 98 + "╝\n")
+
 def passPrediction():
+    print_header("PASS PREDICTION SYSTEM")
     print(f"[*] Connecting to {host}:{port}")
     with socket.create_connection((host, port),timeout=10,) as sock:
         # Give the server a moment to send the question.

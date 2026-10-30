@@ -52,13 +52,13 @@ else:
         "tc_packet_count": args.tc_packet_count,
     }
 
-host = config["host"]
+host = (config["host"])
 port = (config["port"])
 port2 = (config["port2"])
 spacecraft_id = (config["spacecraft_id"])
 virtual_channel_id = (config["virtual_channel_id"])
 apid = (config["apid"])
-payload = config["payload"].encode("utf-8")
+payload = (config["payload"].encode("utf-8"))
 packet_count = (config["packet_count"])
 tc_packet_count = (config["tc_packet_count"])
 

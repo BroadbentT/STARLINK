@@ -54,13 +54,13 @@ else:
         "tc_packet_count": args.tc_packet_count,
     }
 
-host = config["host"]
+host = (config["host"])
 port = (config["port"])
 port2 = (config["port2"])
 spacecraft_id = (config["spacecraft_id"])
-virtual_channel_id = int(config["virtual_channel_id"])
+virtual_channel_id = (config["virtual_channel_id"])
 apid = (config["apid"])
-user_payload = config["payload"].encode("utf-8")
+payload = (config["payload"].encode("utf-8"))
 packet_count = (config["packet_count"])
 tc_packet_count = (config["tc_packet_count"])
 
@@ -106,8 +106,14 @@ def generate_tc_frame(spacecraft_id: int,virtual_channel_id: int,tc_packet_count
     fecf = crc16_ccitt_false(frame_without_fecf)
     return frame_without_fecf + struct.pack(">H", fecf)
 
+def print_header(title):
+    print("╔" + "═" * 98 + "╗")
+    print(f"║ {title:^96} ║")
+    print("╚" + "═" * 98 + "╝\n")
+
 def tmTeleCommand():
-    space_packet = generate_space_packet(apid=apid,packet_count=0,payload=user_payload,)
+    print_header("TM SPACE PACKET")
+    space_packet = generate_space_packet(apid=apid,packet_count=0,payload=payload,)
     frame = generate_tc_frame(spacecraft_id=spacecraft_id,virtual_channel_id=virtual_channel_id,tc_packet_count=0,payload=space_packet,)
     log.info(f"Space Packet length: {len(space_packet)} bytes")
     log.info(f"TC frame length: {len(frame)} bytes")

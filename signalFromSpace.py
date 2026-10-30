@@ -31,6 +31,9 @@ from pwn import hexdump, log, remote
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
+seperator = "-" * 100
+underline = "=" * 100
+
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
 # CONTRACT: GitHub
@@ -39,8 +42,15 @@ from pwn import hexdump, log, remote
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
+def print_header(title):
+    print("╔" + "═" * 98 + "╗")
+    print(f"║ {title:^96} ║")
+    print("╚" + "═" * 98 + "╝\n")
+
+"""Demodulate a WAV file. An explicit path enables non-interactive GUI use."""
+
 def demodulate(input_path=None):
-    """Demodulate a WAV file. An explicit path enables non-interactive GUI use."""
+    print_header("AFSK1200 SIGNAL DEMODULATOR")
     if input_path:
         path = os.path.abspath(os.path.expanduser(input_path))
         if not path.lower().endswith(".wav"):
@@ -71,12 +81,11 @@ def demodulate(input_path=None):
             else:
                 print("File not found. Please try again.")
 
-
     # STAGE 1: LOAD WAV FILE
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[1] LOADING WAV FILE")
-    print("=" * 60)
+    print(seperator)
     try:
         with wave.open(path, "rb") as wf:
             sr = wf.getframerate()
@@ -115,9 +124,9 @@ def demodulate(input_path=None):
 
     # STAGE 2: PREPARE AUDIO SAMPLES
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[2] PREPARING AUDIO SAMPLES")
-    print("=" * 60)
+    print(seperator)
     audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
     print(f"    Initial sample count: {len(audio)}")
     if nch == 2:
@@ -133,9 +142,9 @@ def demodulate(input_path=None):
 
     # STAGE 3: CALCULATE INSTANTANEOUS FREQUENCY
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[3] CALCULATING INSTANTANEOUS FREQUENCY")
-    print("=" * 60)
+    print(seperator)
     analytic = signal.hilbert(audio)
     phase = np.unwrap(np.angle(analytic))
     inst_freq = np.diff(phase) * sr / (2 * np.pi)
@@ -150,9 +159,9 @@ def demodulate(input_path=None):
 
     # STAGE 4: EXTRACT AFSK1200 SYMBOLS
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[4] EXTRACTING AFSK1200 SYMBOLS")
-    print("=" * 60)
+    print(seperator)
     bps = sr // 1200
     if bps < 1:
         print("ERROR: Invalid samples-per-bit value.")
@@ -173,9 +182,9 @@ def demodulate(input_path=None):
 
     # STAGE 5: CLASSIFY FREQUENCIES INTO TONES
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[5] CLASSIFYING FREQUENCIES INTO TONES")
-    print("=" * 60)
+    print(seperator)
     threshold = 1700
     print(f"    Frequency threshold: {threshold} Hz")
     print("    Above threshold    : Tone 1")
@@ -191,9 +200,9 @@ def demodulate(input_path=None):
 
     # STAGE 6: CONVERT TONES TO DATA BITS
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[6] CONVERTING TONES TO DATA BITS")
-    print("=" * 60)
+    print(seperator)
     data_bits = 1 - tone
     print(f"    Total data bits    : {len(data_bits)}")
     print("    First 64 data bits :")
@@ -201,9 +210,9 @@ def demodulate(input_path=None):
 
     # STAGE 7: RECONSTRUCT BYTES
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[7] RECONSTRUCTING BYTES")
-    print("=" * 60)
+    print(seperator)
     out = ""
     byte_count = len(data_bits) // 8
     remaining_bits = len(data_bits) % 8
@@ -225,9 +234,9 @@ def demodulate(input_path=None):
 
     # STAGE 8: FINAL DECODE SUMMARY
 
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("[8] DEMODULATION SUMMARY")
-    print("=" * 60)
+    print(seperator)
     print(f"    Input file          : {path}")
     print(f"    Audio duration      : {duration:.2f} seconds")
     print(f"    Sample rate         : {sr} Hz")
@@ -235,9 +244,9 @@ def demodulate(input_path=None):
     print(f"    Symbols processed   : {nb}")
     print(f"    Bits processed      : {len(data_bits)}")
     print(f"    Bytes reconstructed : {len(out)} characters")
-    print("\n" + "=" * 60)
+    print("\n" + underline)
     print("DECODED OUTPUT")
-    print("=" * 60)
+    print(seperator)
     print(out)
 
 # ============================================================

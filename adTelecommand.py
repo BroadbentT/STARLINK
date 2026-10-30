@@ -55,13 +55,13 @@ else:
         "tc_packet_count": args.tc_packet_count,
     }
 
-host = config["host"]
+host = (config["host"])
 port = (config["port"])
 port2 = (config["port2"])
 spacecraft_id = (config["spacecraft_id"])
 virtual_channel_id = (config["virtual_channel_id"])
-apid = int(config["apid"])
-user_payload = config["payload"].encode("utf-8")
+apid = (config["apid"])
+payload = (config["payload"].encode("utf-8"))
 packet_count = (config["packet_count"])
 tc_packet_count = (config["tc_packet_count"])
 
@@ -73,7 +73,7 @@ tc_packet_count = (config["tc_packet_count"])
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
-def crc16_ccitt_false(data: bytes) -> int:
+def crc16_ccitt_false(data: bytes):
     crc = 0xFFFF
     for byte in data:
         crc ^= byte << 8
@@ -84,7 +84,7 @@ def crc16_ccitt_false(data: bytes) -> int:
                 crc = (crc << 1) & 0xFFFF
     return crc
 
-def generate_space_packet(apid: int, packet_count: int, payload: bytes) -> bytes:
+def generate_space_packet(apid: int, packet_count: int, payload: bytes):
     version = 0
     packet_type = 1
     secondary_header = 0
@@ -94,7 +94,7 @@ def generate_space_packet(apid: int, packet_count: int, payload: bytes) -> bytes
     packet_data_length = len(payload) - 1
     return struct.pack(">HHH", packet_id, sequence_control, packet_data_length) + payload
 
-def generate_tc_frame(spacecraft_id: int,virtual_channel_id: int,tc_packet_count: int,payload: bytes,) -> bytes:
+def generate_tc_frame(spacecraft_id: int,virtual_channel_id: int,tc_packet_count: int,payload: bytes,):
     version = 0
     bypass_flag = 0
     control_command_flag = 0
@@ -107,7 +107,7 @@ def generate_tc_frame(spacecraft_id: int,virtual_channel_id: int,tc_packet_count
     frame += struct.pack(">H", crc16_ccitt_false(frame))
     return frame
 
-def encode_app_command(counter: int, command: bytes) -> bytes:
+def encode_app_command(counter: int, command: bytes):
     return f"0x{counter:02x}:".encode() + command
 
 def parse_space_packet(data: bytes, offset: int):
@@ -207,18 +207,24 @@ def run_once(flag_payload_builder):
     r.close()
     return b"invalid payload" not in flag_response and b"Expected " not in flag_response
 
+def print_header(title):
+    print("╔" + "═" * 98 + "╗")
+    print(f"║ {title:^96} ║")
+    print("╚" + "═" * 98 + "╝\n")
+
 def adTeleCommand():
+    print_header("AD SPACE PACKET")
     attempts = [
-        ("0xNN:PAYLOAD", lambda counter: encode_app_command(counter, user_payload)),
-        ("0xNN+1:PAYLOAD", lambda counter: encode_app_command((counter + 1) & 0xFF, user_payload)),
-        ("NN:PAYLOAD", lambda counter: f"{counter:02x}:".encode() + user_payload),
-        ("0xNNGETPAYLOAD", lambda counter: f"0x{counter:02x}".encode() + user_payload),
+        ("0xNN", lambda counter: encode_app_command(counter, payload)),
+        ("0xNN+1", lambda counter: encode_app_command((counter + 1) & 0xFF, payload)),
+        ("NN", lambda counter: f"{counter:02x}:".encode() + payload),
+        ("0xNNGET", lambda counter: f"0x{counter:02x}".encode() + payload),
     ]
     for name, builder in attempts:
-        log.info(f"Trying USER_PAYLOAD payload format: {name}")
+        log.info(f"Trying payload format: {name}")
         if run_once(builder):
             return
-    log.failure("All targeted USER_PAYLOAD payload formats were rejected")
+    log.failure("All targeted payload formats were rejected")
 
 if __name__ == "__main__":
     adTeleCommand()

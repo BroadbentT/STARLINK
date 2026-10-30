@@ -57,13 +57,13 @@ else:
         "tc_packet_count": args.tc_packet_count,
     }
 
-host = config["host"]
+host = (config["host"])
 port = (config["port"])
 port2 = (config["port2"])
 spacecraft_id = (config["spacecraft_id"])
 virtual_channel_id = (config["virtual_channel_id"])
 apid = (config["apid"])
-# user_payload = config["payload"].encode("utf-8")
+payload = (config["payload"].encode("utf-8"))
 packet_count = (config["packet_count"])
 tc_packet_count = (config["tc_packet_count"])
 
@@ -288,7 +288,13 @@ def solve_challenge(tle1,tle2,lat,lon):
         points.append(f"{alt:.4f}:{az:.4f}")
     return first_second, points
 
+def print_header(title):
+    print("╔" + "═" * 98 + "╗")
+    print(f"║ {title:^96} ║")
+    print("╚" + "═" * 98 + "╝\n")
+
 def trackingSystem():
+    print_header("AUTOMATIC TRACKING SYSTEM")
     print(f"[+] Connecting to {host}:{port}")
     try:
         sock = socket.create_connection((host, port), timeout=10)
