@@ -209,7 +209,6 @@ class SpacecraftGUI(tk.Tk):
         right_workspace.add(operations_frame, weight=2)
 
         operation_specs = [
-#            ("Preview CCSDS Frame", self.preview, True),
             ("Preview CCSDS Frame",self.run_preview, True),
             ("Check Connection to Spacecraft", self.test_connection, True),
             ("Transmit TM Type Telecommand", self.run_tm_telecommand, True),
@@ -217,8 +216,8 @@ class SpacecraftGUI(tk.Tk):
             ("Dump Spacecraft EEPROM Data", self.run_eeprom_inspection, True),
             ("Pass Prediction System", self.run_pass_prediction, True),
             ("Automated Tracking System", self.run_automated_tracking, True),
+            ("Breach Ground Station", self.run_groundstation_security_check, True),
             ("Demodulate AFSK 1200 Signals", self.run_afsk_demodulator, True),
-            ("Groundstation Security Check", self.run_groundstation_security_check, True),
             ("Exit", self.destroy, True),]
 
         for index, (label, command, enabled) in enumerate(operation_specs):
@@ -463,10 +462,10 @@ class SpacecraftGUI(tk.Tk):
         self._run_config_script("antennaPointing.py", "Automated Tracking System")
 
     def run_groundstation_security_check(self):
-        if not messagebox.askyesno("Confirm automated hacking","This launches groundStationBreach.py, which will attempt to hack ground station systems.\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
-            self.log("INFO", "Automated hacking cancelled by user")
+        if not messagebox.askyesno("Confirm groundstation breach","This launches groundStationBreach.py, which will attempt to breach the ground station systems.\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
+            self.log("INFO", "Groundstation breach cancelled by user")
             return
-        self._run_config_script("groundStationBreach.py", "Automated Hacking System")
+        self._run_config_script("groundStationBreach.py", "Ground station breach")
 
     def apply_endpoint(self):
         raw = self.endpoint_var.get().strip()

@@ -286,28 +286,6 @@ def solve_challenge(text):
     print(answer)
     return answer
 
-""" TCP client"""
-
-def recv_until_quiet(sock, timeout=1.0):
-    """
-    Read whatever the server currently sends.
-    HTB challenge servers commonly send the question in
-    several TCP packets, so don't assume one recv() gets
-    the whole thing.
-    """
-
-    sock.settimeout(timeout)
-    chunks = []
-    while True:
-        try:
-            data = sock.recv(4096)
-            if not data:
-                break
-            chunks.append(data)
-        except socket.timeout:
-            break
-    return b"".join(chunks).decode(errors="replace")
-
 def print_header(title):
     print("╔" + "═" * 98 + "╗")
     print(f"║ {title:^96} ║")

@@ -107,26 +107,6 @@ def build_ccsds_packet(payload: bytes) -> bytes:
     header = bytes([(0 << 5) | (0 << 4) | (0 << 3) | ((apid >> 8) & 0x07),apid & 0xFF,(0b11 << 6) | ((seq_count >> 8) & 0x3F),seq_count & 0xFF,(pkt_len >> 8) & 0xFF,pkt_len & 0xFF,])
     return header + payload
 
-def ask_value(argument, prompt, converter=str):
-    if argument is not None:
-        return argument
-    while True:
-        try:
-            value = input(prompt).strip()
-            return converter(value)
-        except ValueError:
-            print("Invalid value. Please try again.")
-
-def restore_terminal_echo():
-    if os.name == "posix":
-        import termios
-        import sys
-
-        if sys.stdin.isatty():
-            settings = termios.tcgetattr(sys.stdin.fileno())
-            settings[3] |= termios.ECHO
-            termios.tcsetattr(sys.stdin.fileno(),termios.TCSANOW,settings)
-
 def print_header(title):
     print("╔" + "═" * 98 + "╗")
     print(f"║ {title:^96} ║")
@@ -136,7 +116,6 @@ def breach():
     print_header("BREACH GROUND STATION")
     print("[!] Using breach code:")
     print("\n\t" + str(XSS))
-#    restore_terminal_echo()
     print()
     WEB_HOST = host
     WEB_PORT = port
