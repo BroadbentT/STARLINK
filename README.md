@@ -202,7 +202,7 @@ python3 ccsds_spacecraft_console.py
 | Language | Filename                          | MD5 Hash                         | Version |
 | -------- | -----------------------------     | ----------------------           | ------- |
 | Python3  | `ccsds_spacecraft_console.py`     | 8d8c0b192207b1ccccdb73fe47f5a15f | Beta    |
-| Python3  | `ccsds_spacecraft_console_gui.py` | 55f1034f6e46002f690ff08ac9c6f50c | Beta    |
+| Python3  | `ccsds_spacecraft_console_gui.py` | 400b7474dd45796130b21a5ef944fc34 | Beta    |
 
 ## LEGAL & ETHICAL USE
 

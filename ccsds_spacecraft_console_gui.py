@@ -128,8 +128,8 @@ class SpacecraftGUI(tk.Tk):
         ttk.Label(header, text="CCSDS SPACECRAFT CONSOLE",font=("Segoe UI", 20, "bold")).pack(anchor="w")
         ttk.Label(header, text="The Consultative Committee for Space Data Systems",font=("Segoe UI", 12)).pack(anchor="w", pady=(2, 0))
         warning = ttk.Label(self,text="LAB TARGETS ONLY: live operations may send commands or read target data; always verify host and port first.",foreground="#9a3412")
-
         warning.pack(anchor="w", pady=(0, 10))
+
         workspace = ttk.Panedwindow(self, orient="vertical")
         workspace.pack(fill="both", expand=True)
         main = ttk.Panedwindow(workspace, orient="horizontal")
@@ -217,7 +217,8 @@ class SpacecraftGUI(tk.Tk):
             ("Pass Prediction System", self.run_pass_prediction, True),
             ("Automated Tracking System", self.run_automated_tracking, True),
             ("Breach Ground Station", self.run_groundstation_security_check, True),
-            ("Demodulate AFSK 1200 Signals", self.run_afsk_demodulator, True),
+            ("Demodulate AFSK 1200 Telecommand Signal", self.run_afsk_demodulator, True),
+            ("Transmit AFSK 1200 Telecommand Signal", self.run_afsk_telecommand, True),
             ("Exit", self.destroy, True),]
 
         for index, (label, command, enabled) in enumerate(operation_specs):
@@ -245,6 +246,187 @@ class SpacecraftGUI(tk.Tk):
         self.terminal.pack(fill="both", expand=True)
         self.status = tk.StringVar(value="Starting…")
         ttk.Label(self, textvariable=self.status, relief="sunken",anchor="w", padding=(6, 4)).pack(fill="x", pady=(10, 0))
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Preview CCSDS Frame
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_preview(self):
+        self._run_config_script("viewPacket.py", "Preview Space Packet")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Check Connection to Spacecraft
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def test_connection(self):
+        try:
+            cfg = self._get_config()
+            if cfg["port"] == 0:
+                raise ValueError("Set a target TCP port between 1 and 65535.")
+        except ValueError as exc:
+            self.log("ERROR", str(exc))
+            messagebox.showerror("Connection settings", str(exc))
+            return
+        self.status.set(f"Testing TCP connection to {cfg['host']}:{cfg['port']}…")
+        self.log("INFO", f"Testing TCP reachability to {cfg['host']}:{cfg['port']} (no application data sent)")
+        threading.Thread(target=self._connection_worker, args=(cfg["host"], cfg["port"]), daemon=True).start()
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Transmit TM Type Telecommand
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_tm_telecommand(self):
+        self._confirm_telecommand("TM")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Transmit AD Type Telecommand
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_ad_telecommand(self):
+        self._confirm_telecommand("AD")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Transmit Telecommand
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def _confirm_telecommand(self, command_type):
+        script = "tmTelecommand.py" if command_type == "TM" else "adTelecommand.py"
+        script_path = Path(__file__).resolve().parent / script
+        if not script_path.is_file():
+            self.log(f"{command_type} Telecommand", f"Required script not found:{script_path}")
+            return
+        if not messagebox.askyesno(
+            f"Confirm {command_type} telecommand",
+            f"This will launch {script}, which may transmit a command to the configured endpoint.\n\n"
+            f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"
+            "Continue only if you are authorised and have verified the target and payload.",
+            parent=self,
+        ):
+            self.log("INFO", f"{command_type} telecommand launch cancelled")
+            return
+        self._run_config_script(script, f"{command_type} Telecommand")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Dump Spacecraft EEPROM Data
+# EXTRA   : "Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_eeprom_inspection(self):
+        if not messagebox.askyesno("Confirm EEPROM Dump Command","This launces scalpedPlatform.py, which will transmit a EEPROM dump command to the configured endpoint.\n\n" "Only continue only if you are authorised and have verified the target", parent=self,):
+                self.log("INFO", f"{command_type} telecommand launch cancelled")
+                return
+        self._run_config_script("scalpedPlatform.py", "EEPROM Dump")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Pass Prediction System
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_pass_prediction(self):
+        if not messagebox.askyesno("Confirm pass prediction system","This launches firstContact.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+            self.log("INFO", "Pass prediction system cancelled by user")
+            return
+        self._run_config_script("firstContact.py", "Pass Prediction System")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Automated Tracking System
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_automated_tracking(self):
+        if not messagebox.askyesno("Confirm automated tracking","This launches antennaPointing.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+            self.log("INFO", "Automated tracking cancelled by user")
+            return
+        self._run_config_script("antennaPointing.py", "Automated Tracking System")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Breach Ground Station
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_groundstation_security_check(self):
+        if not messagebox.askyesno("Confirm groundstation breach","This launches groundStationBreach.py, which will attempt to breach ground station systems.\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
+            self.log("INFO", "Groundstation breach cancelled by user")
+            return
+        self._run_config_script("groundStationBreach.py", "Ground station breach")
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : Demodulate AFSK 1200 Signals
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_afsk_demodulator(self):
+        """Run signalFromSpace.py using the file assigned in File Management."""
+        raw_path = self.selected_audio_path.get().strip()
+        if not raw_path:
+            messagebox.showwarning("No input file selected","Select a WAV file in File Management before running the AFSK demodulator.",parent=self)
+            return
+        audio_path = Path(raw_path).expanduser().resolve()
+        if not audio_path.is_file():
+            messagebox.showerror("Input file not found", f"The selected file does not exist:\n{audio_path}", parent=self)
+            return
+        if audio_path.suffix.lower() != ".wav":
+            messagebox.showerror("Invalid input file", "signalFromSpace.py requires a .wav file.", parent=self)
+            return
+        script_path = Path(__file__).resolve().parent / "signalFromSpace.py"
+        if not script_path.is_file():
+            self.log("AFSK 1200 Demodulator", f"Required script was not found next to this GUI:{script_path}")
+            return
+        self.status.set(f"Running AFSK demodulator on {audio_path.name}…")
+        self.log("INFO", f"Starting signalFromSpace.py with selected_audio_path={audio_path}")
+        threading.Thread(target=self._audio_script_worker,args=(str(script_path), str(audio_path), "AFSK 1200 Demodulator"),daemon=True).start()
+
+# ------------------------------------------------------------------------------------- 
+# AUTHOR  : Terence Broadbent                                                    
+# CONTRACT: GitHub
+# Version : CORE
+# Details : AFSK 1200 Signal Transmission
+# Modified: N/A
+# -------------------------------------------------------------------------------------
+
+    def run_afsk_telecommand(self):
+        if not messagebox.askyesno("Confirm AFSK 1200 signal transmission","This launches spaceOps.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+            self.log("INFO", "AFSK 1200 signal trasnsmission cancelled by user")
+            return
+        self._run_config_script("spaceOps.py", "AFSK 1220 signal transmission")
+
+# -------------------------------------------------------------------------------------
 
     def browse_file_directory(self):
         directory = filedialog.askdirectory(
@@ -319,7 +501,6 @@ class SpacecraftGUI(tk.Tk):
         self.log("INFO", f"Starting {display_name} using {script_name}")
         threading.Thread(target=self._script_worker,args=(str(script_path), json.dumps(config_for_script), display_name),daemon=True,).start()
 
-
     def _script_worker(self, script_path, config_json, display_name):
         try:
             env = os.environ.copy()
@@ -367,59 +548,12 @@ class SpacecraftGUI(tk.Tk):
         self._append_live_output("\n" + separator + "\n" + title + "\n")
         self.status.set(status_text)
 
-    def _confirm_telecommand(self, command_type):
-        script = "tmTelecommand.py" if command_type == "TM" else "adTelecommand.py"
-        script_path = Path(__file__).resolve().parent / script
-        if not script_path.is_file():
-            self.log(f"{command_type} Telecommand", f"Required script not found:{script_path}")
-            return
-        if not messagebox.askyesno(
-            f"Confirm {command_type} telecommand",
-            f"This will launch {script}, which may transmit a command to the configured endpoint.\n\n"
-            f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"
-            "Continue only if you are authorised and have verified the target and payload.",
-            parent=self,
-        ):
-            self.log("INFO", f"{command_type} telecommand launch cancelled")
-            return
-        self._run_config_script(script, f"{command_type} Telecommand")
-
-    def run_tm_telecommand(self):
-        self._confirm_telecommand("TM")
-
-    def run_ad_telecommand(self):
-        self._confirm_telecommand("AD")
-
-    def run_preview(self):
-        self._run_config_script("viewPacket.py", "Preview Space Packet")
-
-    def run_afsk_demodulator(self):
-        """Run signalFromSpace.py using the file assigned in File Management."""
-        raw_path = self.selected_audio_path.get().strip()
-        if not raw_path:
-            messagebox.showwarning("No input file selected","Select a WAV file in File Management before running the AFSK demodulator.",parent=self)
-            return
-        audio_path = Path(raw_path).expanduser().resolve()
-        if not audio_path.is_file():
-            messagebox.showerror("Input file not found", f"The selected file does not exist:\n{audio_path}", parent=self)
-            return
-        if audio_path.suffix.lower() != ".wav":
-            messagebox.showerror("Invalid input file", "signalFromSpace.py requires a .wav file.", parent=self)
-            return
-        script_path = Path(__file__).resolve().parent / "signalFromSpace.py"
-        if not script_path.is_file():
-            self.log("AFSK 1200 Demodulator", f"Required script was not found next to this GUI:{script_path}")
-            return
-        self.status.set(f"Running AFSK demodulator on {audio_path.name}…")
-        self.log("INFO", f"Starting signalFromSpace.py with selected_audio_path={audio_path}")
-        threading.Thread(target=self._audio_script_worker,args=(str(script_path), str(audio_path), "AFSK 1200 Demodulator"),daemon=True).start()
-
     def _audio_script_worker(self, script_path, audio_path, display_name):
         try:
             result = subprocess.run([sys.executable, script_path, audio_path],capture_output=True, text=True, timeout=300, check=False,cwd=str(Path(script_path).resolve().parent),)
             combined = result.stdout or ""
             if result.stderr:
-                combined += "\n[stderr]\n" + result.stderr
+                combined += "\n[stAutomated Tracking Systemderr]\n" + result.stderr
             if not combined.strip():
                 combined = "(The script produced no console output.)"
             title = f"{display_name.upper()} — {'COMPLETED' if result.returncode == 0 else 'EXIT CODE ' + str(result.returncode)}"
@@ -436,36 +570,6 @@ class SpacecraftGUI(tk.Tk):
             self.after(0, lambda: self._write(f"Could not start {display_name}: {message}"))
             self.after(0, lambda: self.status.set(f"{display_name}: failed to start"))
             self.log("ERROR", f"Could not start {display_name}: {message}")
-
-    def run_eeprom_inspection(self):
-        if not messagebox.askyesno(
-                f"Confirm EEPROM Dump Command",
-                f"This will launch scalpedPlatform.py, which will transmit a EEPROM dump command to the configured endpoint.\n\n"
-                f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"
-                "Continue only if you are authorised and have verified the target and payload.",
-                parent=self,
-             ):
-                self.log("INFO", f"{command_type} telecommand launch cancelled")
-                return
-        self._run_config_script("scalpedPlatform.py", "EEPROM Dump")
-
-    def run_pass_prediction(self):
-        if not messagebox.askyesno("Confirm pass prediction system","This launches firstContact.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
-            self.log("INFO", "Pass prediction system cancelled by user")
-            return
-        self._run_config_script("firstContact.py", "Pass Prediction System")
-
-    def run_automated_tracking(self):
-        if not messagebox.askyesno("Confirm automated tracking","This launches antennaPointing.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
-            self.log("INFO", "Automated tracking cancelled by user")
-            return
-        self._run_config_script("antennaPointing.py", "Automated Tracking System")
-
-    def run_groundstation_security_check(self):
-        if not messagebox.askyesno("Confirm groundstation breach","This launches groundStationBreach.py, which will attempt to breach the ground station systems.\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
-            self.log("INFO", "Groundstation breach cancelled by user")
-            return
-        self._run_config_script("groundStationBreach.py", "Ground station breach")
 
     def apply_endpoint(self):
         raw = self.endpoint_var.get().strip()
@@ -552,19 +656,6 @@ class SpacecraftGUI(tk.Tk):
         except OSError as exc:
             self.log("ERROR", f"Could not save log: {exc}")
             messagebox.showerror("Save log failed", str(exc))
-
-    def test_connection(self):
-        try:
-            cfg = self._get_config()
-            if cfg["port"] == 0:
-                raise ValueError("Set a target TCP port between 1 and 65535.")
-        except ValueError as exc:
-            self.log("ERROR", str(exc))
-            messagebox.showerror("Connection settings", str(exc))
-            return
-        self.status.set(f"Testing TCP connection to {cfg['host']}:{cfg['port']}…")
-        self.log("INFO", f"Testing TCP reachability to {cfg['host']}:{cfg['port']} (no application data sent)")
-        threading.Thread(target=self._connection_worker, args=(cfg["host"], cfg["port"]), daemon=True).start()
 
     def _connection_worker(self, host, port):
         try:
