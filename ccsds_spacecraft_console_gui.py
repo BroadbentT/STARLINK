@@ -72,17 +72,6 @@ def generate_space_packet(apid: int, packet_count: int, payload: bytes):
         raise ValueError("Payload is too large for CCSDS packet data length.")
     return (packet_id.to_bytes(2, "big") + sequence_control.to_bytes(2, "big") + packet_data_length.to_bytes(2, "big") + payload)
 
-def ccsds_fecf(data: bytes):
-    crc = 0xFFFF
-    for byte in data:
-        crc ^= byte << 8
-        for _ in range(8):
-            if crc & 0x8000:
-                crc = ((crc << 1) ^ 0x1021) & 0xFFFF
-            else:
-                crc = (crc << 1) & 0xFFFF
-    return crc
-
 def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_count: int, payload: bytes):
     if not 0 <= spacecraft_id <= 0x3FF:
         raise ValueError("Spacecraft ID must fit in 10 bits (0–1023).")
@@ -99,6 +88,17 @@ def generate_tc_frame(spacecraft_id: int, virtual_channel_id: int,tc_packet_coun
     header = bytes([(spacecraft_id >> 8) & 0x03,spacecraft_id & 0xFF,(virtual_channel_id << 2) | ((frame_length >> 8) & 0x03),frame_length & 0xFF,tc_packet_count,])
     without_fecf = header + payload
     return without_fecf + ccsds_fecf(without_fecf).to_bytes(2, "big")
+
+def ccsds_fecf(data: bytes):
+    crc = 0xFFFF
+    for byte in data:
+        crc ^= byte << 8
+        for _ in range(8):
+            if crc & 0x8000:
+                crc = ((crc << 1) ^ 0x1021) & 0xFFFF
+            else:
+                crc = (crc << 1) & 0xFFFF
+    return crc
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -315,13 +315,7 @@ class SpacecraftGUI(tk.Tk):
         if not script_path.is_file():
             self.log(f"{command_type} Telecommand", f"Required script not found:{script_path}")
             return
-        if not messagebox.askyesno(
-            f"Confirm {command_type} telecommand",
-            f"This will launch {script}, which may transmit a command to the configured endpoint.\n\n"
-            f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"
-            "Continue only if you are authorised and have verified the target and payload.",
-            parent=self,
-        ):
+        if not messagebox.askyesno(f"Confirm {command_type} telecommand",f"This will launch {script}, which may transmit a command to the configured endpoint.\n\n" f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n" "Continue only if you are authorised and have verified the target and payload.",parent=self,):
             self.log("INFO", f"{command_type} telecommand launch cancelled")
             return
         self._run_config_script(script, f"{command_type} Telecommand")
@@ -336,10 +330,10 @@ class SpacecraftGUI(tk.Tk):
 # -------------------------------------------------------------------------------------
 
     def run_eeprom_inspection(self):
-        if not messagebox.askyesno("Confirm EEPROM Dump Command","This launces scalpedPlatform.py, which will transmit a EEPROM dump command to the configured endpoint.\n\n" "Only continue only if you are authorised and have verified the target", parent=self,):
-                self.log("INFO", f"{command_type} telecommand launch cancelled")
-                return
-        self._run_config_script("scalpedPlatform.py", "EEPROM Dump")
+        if not messagebox.askyesno("Confirm EEPROM Dump Command","This will launch scalpedPlatform.py.",parent=self,):
+            self.log("INFO", "EEPROM dump cancelled by user")
+            return
+        self._run_config_script("scalpedPlatform.py","EEPROM Dump")
 
 # ------------------------------------------------------------------------------------- 
 # AUTHOR  : Terence Broadbent                                                    
@@ -350,7 +344,7 @@ class SpacecraftGUI(tk.Tk):
 # -------------------------------------------------------------------------------------
 
     def run_pass_prediction(self):
-        if not messagebox.askyesno("Confirm pass prediction system","This launches firstContact.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+        if not messagebox.askyesno("Confirm pass prediction system","This launches firstContact.py, which may control physical antenna hardware.\n\n" f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n"  "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
             self.log("INFO", "Pass prediction system cancelled by user")
             return
         self._run_config_script("firstContact.py", "Pass Prediction System")
@@ -364,7 +358,7 @@ class SpacecraftGUI(tk.Tk):
 # -------------------------------------------------------------------------------------
 
     def run_automated_tracking(self):
-        if not messagebox.askyesno("Confirm automated tracking","This launches antennaPointing.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+        if not messagebox.askyesno("Confirm automated tracking","This launches antennaPointing.py, which may control physical antenna hardware.\n\n" f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
             self.log("INFO", "Automated tracking cancelled by user")
             return
         self._run_config_script("antennaPointing.py", "Automated Tracking System")
@@ -378,7 +372,7 @@ class SpacecraftGUI(tk.Tk):
 # -------------------------------------------------------------------------------------
 
     def run_groundstation_security_check(self):
-        if not messagebox.askyesno("Confirm groundstation breach","This launches groundStationBreach.py, which will attempt to breach ground station systems.\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
+        if not messagebox.askyesno("Confirm groundstation breach","This launches groundStationBreach.py, which will attempt to breach ground station systems.\n\n" f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n" "Only continue if you are authorised and you have the appropriate permissions.",parent=self,):
             self.log("INFO", "Groundstation breach cancelled by user")
             return
         self._run_config_script("groundStationBreach.py", "Ground station breach")
@@ -388,11 +382,12 @@ class SpacecraftGUI(tk.Tk):
 # CONTRACT: GitHub
 # Version : CORE
 # Details : Demodulate AFSK 1200 Signals
+# NOTE    : Run signalFromSpace.py using the file assigned in File Management.
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
     def run_afsk_demodulator(self):
-        """Run signalFromSpace.py using the file assigned in File Management."""
+        script_path = Path(__file__).resolve().parent / "signalFromSpace.py"
         raw_path = self.selected_audio_path.get().strip()
         if not raw_path:
             messagebox.showwarning("No input file selected","Select a WAV file in File Management before running the AFSK demodulator.",parent=self)
@@ -404,7 +399,6 @@ class SpacecraftGUI(tk.Tk):
         if audio_path.suffix.lower() != ".wav":
             messagebox.showerror("Invalid input file", "signalFromSpace.py requires a .wav file.", parent=self)
             return
-        script_path = Path(__file__).resolve().parent / "signalFromSpace.py"
         if not script_path.is_file():
             self.log("AFSK 1200 Demodulator", f"Required script was not found next to this GUI:{script_path}")
             return
@@ -417,11 +411,12 @@ class SpacecraftGUI(tk.Tk):
 # CONTRACT: GitHub
 # Version : CORE
 # Details : AFSK 1200 Signal Transmission
+# NOTE    : Not implemented yet
 # Modified: N/A
 # -------------------------------------------------------------------------------------
 
     def run_afsk_telecommand(self):
-        if not messagebox.askyesno("Confirm AFSK 1200 signal transmission","This launches spaceOps.py, which may control physical antenna hardware.\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
+        if not messagebox.askyesno("Confirm AFSK 1200 signal transmission","This launches spaceOps.py, which may control physical antenna hardware.\n\n" f"Target: {self.vars['host'].get().strip()}:{self.vars['port'].get().strip()}\n\n" "Only continue if you are authorised and the antenna system is safe to move.",parent=self,):
             self.log("INFO", "AFSK 1200 signal trasnsmission cancelled by user")
             return
         self._run_config_script("spaceOps.py", "AFSK 1220 signal transmission")
